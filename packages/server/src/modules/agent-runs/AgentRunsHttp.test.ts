@@ -211,6 +211,41 @@ describe("agent runs", () => {
     stream.close();
   });
 
+  it("passes JSON configuration to the agent process", async () => {
+    await writeFile(
+      path.join(echo, "agent.ts"),
+      `
+      export async function chat(request: { configuration: unknown }) {
+        return request.configuration;
+      }
+    `,
+    );
+    const configuration = { model: "example-model", options: { enabled: true }, count: 3 };
+    const run = await launch({ agentName: "echo", message: "Configure", configuration });
+    const stream = events(run.id);
+    try {
+      expect((await stream.next("result")).value).toEqual(configuration);
+      await stream.next("status", (event) => event.status === "completed");
+    } finally {
+      stream.close();
+    }
+  });
+
+  it("rejects configuration exceeding the size limit", async () => {
+    const response = await fetch(`${base}/projects/${project.id}/agent-runs`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        agentName: "echo",
+        message: "Configure",
+        files: [],
+        debug: false,
+        configuration: { value: "x".repeat(262_144) },
+      }),
+    });
+    expect(response.status).toBe(400);
+  });
+
   it("fails a run whose agent does not export chat", async () => {
     const run = await launch({ agentName: "silent", message: "hi" });
     const stream = events(run.id);

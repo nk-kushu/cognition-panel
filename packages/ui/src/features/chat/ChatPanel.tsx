@@ -2,7 +2,7 @@ import { Alert, Button, Collapse, Empty, Input, Select, Tag, Tooltip } from "ant
 import { IconChevronRight } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import type { AgentRunStatus } from "@kushex/contracts";
+import type { AgentConfiguration, AgentRunStatus } from "@kushex/contracts";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { errorMessage } from "../../shared/api/errorMessage";
 import {
@@ -55,6 +55,8 @@ import { Markdown } from "../../shared/components/Markdown";
 import { AttachFilesDialog } from "./AttachFilesDialog";
 import { CodingChangeReview, codingResultPreview } from "./CodingChangeReview";
 
+import { AgentConfigurationPanel } from "../plugins/AgentConfigurationPanel";
+
 /** The agent's task contract allows at most this many files. */
 const MAX_FILES = 16;
 
@@ -93,7 +95,9 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
   const activeDebug =
     debugRun?.projectId === projectId && !isFinished(debugRun.status) ? debugRun : null;
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [configurations, setConfigurations] = useState<Record<string, AgentConfiguration>>({});
   const agentName = chat.agentName;
+  const selectedAgent = agents.data?.entries.find((agent) => agent.name === agentName);
   const known = !!agentName && !!agents.data?.entries.some((agent) => agent.name === agentName);
 
   useEffect(() => {
@@ -116,6 +120,7 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
         threadId,
         agentName,
         message,
+        ...(configurations[agentName] ? { configuration: configurations[agentName] } : {}),
         files,
         debug,
         ...(debug ? { breakpoints } : {}),
@@ -305,6 +310,18 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
                 })) ?? []),
               ]}
             />
+            {selectedAgent && (
+              <AgentConfigurationPanel
+                key={selectedAgent.name}
+                agent={selectedAgent}
+                projectId={projectId}
+                value={configurations[selectedAgent.name] ?? {}}
+                disabled={starting.isLoading || !!activeDebug}
+                onChange={(value) =>
+                  setConfigurations((all) => ({ ...all, [selectedAgent.name]: value }))
+                }
+              />
+            )}
             <Tooltip
               title={
                 debugging

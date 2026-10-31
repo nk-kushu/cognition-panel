@@ -35,6 +35,18 @@ Kushibot continues to own execution, sessions, budgets, and shared contracts.
 
 ## Run with Codex CLI
 
+Workspace snapshots always skip `.git` and `node_modules` at every depth. By default
+they also skip directories named `dist`, `build`, `coverage`, `.next`, `.nuxt`,
+`.output`, `.cache`, `.turbo`, and `.vite`. These exclusions affect change review,
+not CLI access; changes inside excluded directories are not tracked. `.gitignore`
+is not used. The 10,000-file snapshot limit still applies to included files.
+
+Set `excludedDirectories` in `createCodingAgent` options to replace the generated
+directory list (names matched at every depth, no paths or globs). Use `[]` to
+disable generated-directory exclusions. Explicit file allowlists bypass these
+exclusions. In UI chat, set `KUSHEX_EXCLUDED_DIRECTORIES` to a comma-separated list;
+an empty value disables generated-directory exclusions. Leave it unset for defaults.
+
 Use Node.js 22.18+ and build the sibling `kushibot` checkout first. From `kushex`,
 install the usual workspace dependencies. An application can use this composition:
 
@@ -264,3 +276,69 @@ gateways, real isolated commands, and temporary workspaces. No paid model calls 
 The creation API changed from `new CodingAgent(options)` to
 `createCodingAgent(options)` with Codex CLI or an injected test gateway. Execution controls moved from
 task fields to the second argument of `run(task, { signal, onProgress })`.
+
+### Chat configuration panel
+
+The browser entry `ui.tsx` contributes Coding settings to the chat composer.
+`Model` overrides the server's `CODEX_MODEL` for subsequent messages; an empty
+value uses the server default. The agent reads this from `request.configuration.model`.
+
+### Skills, guards, and bounded repair
+
+Chat enables engineering review by default. The full-screen Configure modal contains
+Atlas's portable catalog of 12 guards and 5 attached skills. Definitions are copied
+into `src/engineering/catalog.ts`; the plugin does not import or call Atlas at runtime.
+This is a snapshot of built-in defaults, not an import of Atlas's saved template overrides.
+
+For each skill or guard, choose Automatic (DecisionUnit), Required, or Off. Skills
+contribute instructions before both planning and editing. Optional guard selection
+runs against a bounded task/change summary for every proposed revision. Required guards
+need no relevance call and remain required at enforcement. The 12 candidates are split
+into batches within Kushibot's eight-candidate selection limits. Abstaining or unavailable
+selectors include candidates conservatively; cancellation, unknown usage, and unresolved
+selection stop the run.
+
+Reviewers receive complete before/after contents of changed files, have no tools, and
+return bounded findings citing changed paths. Review input is limited to 200,000 UTF-8
+bytes; oversized evidence stops review rather than silently accepting partial coverage.
+Kushibot's GuardRunner validates versioned rule results and target-bound evidence, and
+GuardEnforcementPolicy determines accept/request-fix/stop. Model review is evidence of a
+review against those changes, not proof that commands or tests passed. Register actual
+commands through trusted `CodingAgentOptions.checks` for deterministic verification;
+the existing workspace acceptance gate still requires them to pass on the current files.
+The ESLint reviewer does not automatically install or execute ESLint.
+
+Blockers return concrete feedback to the same editing session. Repairs share the run's
+usage ledger and are bounded by `maxFixCycles` (default 2, range 0–4), the model/iteration
+budget, and the deadline. Each repaired revision is selected and reviewed again. An
+unknown/malformed blocking result or exhausted repair allowance stops acceptance.
+Readability findings are advisory by default. Findings, selections, and enforcement
+reports are written to artifacts; progress appears in chat and debug events.
+
+The chat request accepts `configuration.engineering` with `enabled`, `maxFixCycles`,
+and an `overrides` object keyed by catalog ID. Overrides may set `skillMode`, `guardMode`,
+`skillInstructions`, `reviewInstructions`, and `advisory`. Configuration is validated and
+snapshotted for each run; changes in the modal apply to the next message. Settings remain
+in the mounted project chat, as with other plugin configuration. This implementation
+adds instruction skills and review guards; Atlas's assessment/bootstrap services and
+starter-template files are not executed by these skills.
+
+Programmatic hosts explicitly opt in:
+
+```ts
+import { createCodingAgent, CodingEngineeringConfiguration } from "./src/index";
+
+const agent = createCodingAgent({
+  workspace, artifacts, gateway, profile,
+  engineering: new CodingEngineeringConfiguration({
+    maxFixCycles: 2,
+    overrides: {
+      "input-validation-guard": { guardMode: "required" },
+      "readability-guard": { skillMode: "required" },
+    },
+  }),
+});
+```
+
+Run `pnpm test:agent:coding:engineering` for offline selection/enforcement tests and
+`pnpm test:agent:coding:container` for the plan/edit/review/repair workflow in Bubblewrap.

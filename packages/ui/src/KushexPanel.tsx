@@ -21,6 +21,8 @@ import {
 import { EditorFontSizeContext } from "./shared/lib/editorFontSize";
 import type { KushexPanelHandle, KushexPanelOptions } from "./types";
 
+import { AgentUiPluginsContext } from "./features/plugins/AgentConfigurationPanel";
+
 type KushexPanelProps = KushexPanelOptions & Readonly<{ ref?: Ref<KushexPanelHandle> }>;
 
 /**
@@ -29,6 +31,7 @@ type KushexPanelProps = KushexPanelOptions & Readonly<{ ref?: Ref<KushexPanelHan
  */
 export function KushexPanel({
   instanceId = "default",
+  agentUiPlugins = [],
   apiBaseUrl,
   colorMode,
   router,
@@ -69,7 +72,9 @@ export function KushexPanel({
       <ThemedPanel {...rest} colorMode={colorMode}>
         <PanelRouter mode={router} basename={basename} initialPath={initialPath}>
           <NavigationBridge navigateRef={navigateRef} onNavigate={onNavigate} />
-          <Workbench />
+          <AgentUiPluginsContext value={agentUiPlugins}>
+            <Workbench />
+          </AgentUiPluginsContext>
         </PanelRouter>
       </ThemedPanel>
     </Provider>

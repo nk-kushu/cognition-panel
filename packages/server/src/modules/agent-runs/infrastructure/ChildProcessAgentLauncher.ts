@@ -106,6 +106,7 @@ export class ChildProcessAgentLauncher implements AgentLauncher {
         workspace: launch.workspace,
         message: launch.message,
         files: launch.files,
+        configuration: launch.configuration ?? {},
       };
       child.send(command);
       run.emit({ type: "status", status: "running" });

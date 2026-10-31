@@ -6,6 +6,7 @@ import {
   type EditingResult,
   type IPolicy,
 } from "kushibot";
+import type { CodingGuardReview } from "../../engineering/CodingGuardReview";
 import type { WorkspaceTools } from "../../tools/WorkspaceTools";
 
 /** Binds the accepted plan, editing tools, and implementation acceptance policy. */
@@ -16,6 +17,8 @@ export class EditingSessionPolicy implements IPolicy<
   constructor(
     private readonly runtime: AgentRunRuntime,
     private readonly workspaceTools: WorkspaceTools,
+    private readonly guidance = "",
+    private readonly guardReview?: CodingGuardReview,
   ) {}
 
   async apply(request: AgentTaskBindingRequest): Promise<IAgentSessionBinding<EditingResult>> {
@@ -33,16 +36,23 @@ export class EditingSessionPolicy implements IPolicy<
       input: input.value,
       instructions: [
         request.assignment.instructions,
+        this.guidance,
         this.workspaceTools.description(false),
         'Final value: {"summary":"what changed","baseSnapshotRef":"from status","resultSnapshotRef":"from status","changedPaths":[],"changeArtifactRefs":[],"unresolved":[]}. Copy actual fields from the CLI response status. The host runs registered checks after each editing CLI call. Use cli with command "true" to refresh status before returning your final result.',
       ].join("\n"),
       tools: this.workspaceTools.bind(false),
       acceptance: {
-        apply: async ({ candidate }) => ({
-          accepted: await this.workspaceTools.accepts(candidate),
-          feedback:
-            "Editing must match status and all required checks must pass after the last edit.",
-        }),
+        apply: async ({ candidate }) => {
+          if (!(await this.workspaceTools.accepts(candidate)))
+            return {
+              accepted: false,
+              feedback:
+                "Editing must match status and all required checks must pass after the last edit.",
+            };
+          return this.guardReview
+            ? this.guardReview.apply(candidate)
+            : { accepted: true, feedback: "Workspace evidence and checks passed." };
+        },
       },
     };
   }

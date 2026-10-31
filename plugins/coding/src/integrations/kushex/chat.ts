@@ -1,6 +1,7 @@
 import type { Agent, ChatResponse, EditingResult, TaskInput } from "kushibot";
 import { LocalChatArtifacts } from "./LocalChatArtifacts";
 import type { ChatRequest } from "./ChatRequest";
+import { CodingEngineeringConfiguration } from "../../engineering/CodingEngineeringConfiguration";
 import { createCodingAgent } from "../../composition/createCodingAgent";
 
 /**
@@ -12,15 +13,22 @@ export async function chat(
 ): Promise<
   ChatResponse<EditingResult> & Awaited<ReturnType<Agent<TaskInput, EditingResult>["run"]>>
 > {
-  const localArtifacts = request.artifacts
-    ? null
-    : await LocalChatArtifacts.open(request.workspace, process.env.KUSHEX_ARTIFACTS_DIR);
-  const artifacts = request.artifacts ?? localArtifacts!.services.store;
+  const localArtifacts = await LocalChatArtifacts.open(
+    request.workspace,
+    process.env.KUSHEX_ARTIFACTS_DIR,
+  );
+
+  const artifacts = localArtifacts.services.store;
+
   try {
     const agent = createCodingAgent({
       provider: "codex-cli",
       workspace: request.workspace,
       artifacts,
+      engineering: new CodingEngineeringConfiguration(request.configuration?.engineering ?? {}),
+      excludedDirectories: process.env.KUSHEX_EXCLUDED_DIRECTORIES?.split(",")
+        .map((name) => name.trim())
+        .filter(Boolean),
       ...(request.debug ? { debug: request.debug } : {}),
       codex: {
         executable: process.env.CODEX_EXECUTABLE || undefined,
@@ -29,7 +37,10 @@ export async function chat(
       profile: {
         id: "coding-chat",
         providerId: "codex-cli",
-        modelId: process.env.CODEX_MODEL || "gpt-6.1-sol",
+        modelId:
+          typeof request.configuration?.model === "string" && request.configuration.model.trim()
+            ? request.configuration.model.trim()
+            : process.env.CODEX_MODEL || "gpt-6.1-sol",
         contextTokens: 400_000,
         maxOutputTokens: 16_000,
         maxRequestBytes: 1_048_576,
@@ -47,12 +58,21 @@ export async function chat(
       },
       { signal: request.signal, onProgress: (message) => request.progress(message) },
     );
+
     const result = run.result;
+    const outcome = run.snapshot.outcome;
+    const incomplete =
+      outcome?.status === "failed"
+        ? outcome.error.message
+        : outcome?.status === "stopped"
+          ? outcome.reason.message
+          : "The coding task did not produce a completed result.";
+
     return {
       ...run,
       schemaVersion: 1,
-      message: result?.summary ?? "The coding task did not produce a completed result.",
-      unresolved: result?.unresolved ?? [],
+      message: result?.summary ?? incomplete,
+      unresolved: result?.unresolved ?? [incomplete],
       result,
       presentation:
         result && result.changedPaths.length > 0 && result.unresolved.length === 0
@@ -60,6 +80,6 @@ export async function chat(
           : "message",
     };
   } finally {
-    await localArtifacts?.close();
+    await localArtifacts.close();
   }
 }

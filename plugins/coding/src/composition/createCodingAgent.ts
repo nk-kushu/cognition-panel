@@ -29,6 +29,8 @@ export function createCodingAgent(options: CodingAgentOptions): Agent<TaskInput,
     gateway: suppliedGateway,
     provider,
     compression,
+    engineering,
+    excludedDirectories,
     ...settings
   } = options;
   // CLI settings configure the gateway; shared options configure the runtime.
@@ -55,7 +57,22 @@ export function createCodingAgent(options: CodingAgentOptions): Agent<TaskInput,
   return new Agent({
     id: "coding",
     requestContract: new TaskInputContract(new JsonValueContract()),
-    workflow: new CodingRunWorkflow(workspace, artifacts, checks, model, compression),
-    runtime: new AgentRuntimeFactory({ ...runtime, gateway }),
+    workflow: new CodingRunWorkflow(
+      workspace,
+      artifacts,
+      checks,
+      model,
+      compression,
+      excludedDirectories,
+      engineering,
+    ),
+    runtime: new AgentRuntimeFactory({
+      ...runtime,
+      gateway,
+      limits: {
+        ...(engineering?.settings.enabled ? { fixes: engineering.settings.maxFixCycles } : {}),
+        ...runtime.limits,
+      },
+    }),
   });
 }

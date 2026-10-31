@@ -18,12 +18,32 @@ import type { WorkspaceEvidence } from "kushibot";
 
 /** Captures CLI additions/deletions as well as edits, and projects restricted tasks. */
 export class CliWorkspace {
+  private readonly excludedDirectories: ReadonlySet<string>;
   private initial = new Map<string, string>();
   private readonly reviewable = new Set<string>();
   constructor(
     private readonly directory: string,
     private readonly files: readonly string[],
-  ) {}
+    excludedDirectories: readonly string[] = [
+      "dist",
+      "build",
+      "coverage",
+      ".next",
+      ".nuxt",
+      ".output",
+      ".cache",
+      ".turbo",
+      ".vite",
+    ],
+  ) {
+    if (
+      excludedDirectories.some(
+        (name) => !name || name === "." || name === ".." || /[/\\]/.test(name),
+      )
+    )
+      throw new Error("Workspace exclusions must be directory names, not paths or globs.");
+    this.excludedDirectories = new Set(excludedDirectories);
+  }
 
   async initialize(evidence: WorkspaceEvidence): Promise<void> {
     this.initial = await this.snapshot();
@@ -89,7 +109,7 @@ export class CliWorkspace {
       }
       const result = await work(projection);
       if (!readOnly) {
-        const projected = new CliWorkspace(projection, []);
+        const projected = new CliWorkspace(projection, [], []);
         const contents = await projected.snapshot();
         if ([...contents.keys()].some((file) => !this.files.includes(file)))
           throw new Error("CLI created files outside the task allowlist; changes were discarded.");
@@ -131,7 +151,8 @@ export class CliWorkspace {
   private async walk(relative: string, contents: Map<string, string>): Promise<void> {
     const entries = await readdir(path.join(this.directory, relative), { withFileTypes: true });
     for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-      if (entry.name === ".git" || (relative === "" && entry.name === "node_modules")) continue;
+      if (entry.name === ".git" || entry.name === "node_modules") continue;
+      if (entry.isDirectory() && this.excludedDirectories.has(entry.name)) continue;
       const file = relative ? `${relative}/${entry.name}` : entry.name;
       if (entry.isDirectory()) await this.walk(file, contents);
       else {

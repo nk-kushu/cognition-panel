@@ -79,6 +79,7 @@ export class AgentRunService implements ManagedResource {
       workspace: checkout.absolute,
       message: request.message,
       files: request.files,
+      configuration: request.configuration ?? {},
       breakpoints: request.breakpoints ?? {},
       recordDebugEvent: (event) => this.debugEvents?.record(run, event),
     });

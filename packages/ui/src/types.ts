@@ -1,4 +1,5 @@
-import type { CSSProperties } from "react";
+import type { AgentConfiguration } from "@kushex/contracts";
+import type { ComponentType, CSSProperties } from "react";
 
 /** Public types are self-contained: no internal store types leak to hosts. */
 export type ColorMode = "light" | "dark" | "system";
@@ -11,7 +12,22 @@ export type ColorMode = "light" | "dark" | "system";
  */
 export type RouterMode = "memory" | "browser" | "hash";
 
+export type AgentConfigurationProps = Readonly<{
+  agentName: string;
+  projectId: string;
+  value: AgentConfiguration;
+  onChange: (value: AgentConfiguration) => void;
+  disabled: boolean;
+}>;
+
+export type AgentUiPlugin = Readonly<{
+  id: string;
+  agents: Readonly<Record<string, ComponentType<AgentConfigurationProps>>>;
+}>;
+
 export type KushexPanelOptions = Readonly<{
+  /** Trusted frontend contributions, keyed by backend plugin and agent IDs. */
+  agentUiPlugins?: readonly AgentUiPlugin[];
   /** Overrides the stored preference while set; changing it switches the theme live. */
   colorMode?: ColorMode;
   /** Same-origin API prefix. Cross-origin deployments require authentication first. */

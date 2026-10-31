@@ -1,3 +1,4 @@
+import { ExecutionDetails } from "./ExecutionDetails";
 import { Empty, Tag, Tooltip } from "antd";
 import { IconChevronRight } from "@tabler/icons-react";
 import type { RecordedDebugEventDto } from "@kushex/contracts";
@@ -223,11 +224,13 @@ function Inspector({
   const style = KIND_STYLES[span.kind];
   const info = KIND_INFO[span.kind];
   const entries: Entry[] = [
-    ...span.events.map((item) => ({
-      at: item.event.occurredAtEpochMs,
-      kind: "event" as const,
-      item,
-    })),
+    ...span.events
+      .filter((item) => !item.event.payload.operation?.startsWith("detail."))
+      .map((item) => ({
+        at: item.event.occurredAtEpochMs,
+        kind: "event" as const,
+        item,
+      })),
     ...span.children.map((child) => ({ at: child.startMs, kind: "child" as const, span: child })),
   ].sort((a, b) => a.at - b.at);
   const facts: readonly (readonly [string, string | undefined | null])[] = [
@@ -313,6 +316,10 @@ function Inspector({
             ))}
           </dl>
         </Section>
+      )}
+
+      {(["turn", "model", "tool"] as string[]).includes(span.kind) && (
+        <ExecutionDetails events={contentEvents(span)} />
       )}
 
       <Section title={span.kind === "root" ? "Run-level events" : "What happened inside"}>
@@ -412,4 +419,8 @@ function Section({ title, children }: Readonly<{ title: string; children: ReactN
       {children}
     </section>
   );
+}
+
+function contentEvents(span: TraceNode): RecordedDebugEventDto[] {
+  return [...span.events, ...span.children.flatMap(contentEvents)];
 }

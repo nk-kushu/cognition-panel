@@ -48,7 +48,9 @@ services:
       DATABASE_URL: *database-url
       KUSHEX_WORKSPACES_ROOT: /workspaces
       KUSHEX_PLUGINS_DIR: /plugins
+      KUSHEX_KUSHIBOT_DIR: /app/node_modules/kushibot
       KUSHEX_ARTIFACTS_DIR: /var/lib/kushex/artifacts
+      KUSHEX_EXCLUDED_DIRECTORIES: ${KUSHEX_EXCLUDED_DIRECTORIES-dist,build,coverage,.next,.nuxt,.output,.cache,.turbo,.vite}
       KUSHEX_ALLOWED_ORIGINS: http://localhost:3050,http://127.0.0.1:3050
       # Agents run from the chat read model credentials from the backend's environment.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

@@ -48,6 +48,7 @@ export type ArtifactItem = Readonly<{
 
 export type ContextTurn = Readonly<{
   spanId: string;
+  detailEvents?: readonly RecordedDebugEventDto[];
   number: number;
   startMs: number;
   durationMs: number | null;
@@ -391,6 +392,7 @@ function turnsOf(mind: TraceNode, sessionId: string): ContextTurn[] {
     const toolSpan = span.children.find((child) => child.kind === "tool");
     return {
       spanId: span.id,
+      detailEvents: [span, ...descendants(span)].flatMap((node) => node.events),
       number: draft.number,
       startMs: span.startMs,
       durationMs: span.durationMs,

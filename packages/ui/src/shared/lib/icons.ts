@@ -1,5 +1,6 @@
 import {
   IconAdjustments,
+  IconArrowsMaximize,
   IconArchive,
   IconArrowForwardUp,
   IconArrowLeft,
@@ -87,3 +88,4 @@ export const ContextIcon = IconLayersSubtract;
 export const ArtifactIcon = IconArchive;
 export const MemoryIcon = IconDatabase;
 export const NotebookIcon = IconNotebook;
+export const FullscreenIcon = IconArrowsMaximize;

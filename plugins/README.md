@@ -141,3 +141,22 @@ agents only; there are no plugin pages, services, tools or lifecycle hooks.
 Standalone Docker mounts this directory at `/plugins` and sets
 `KUSHEX_PLUGINS_DIR=/plugins`. For another location, update the mount and environment
 variable together. Mount packages writable to save edits through the editor.
+
+## React agent configuration
+
+A plugin may supply a browser-only `ui.tsx` default export satisfying `AgentUiPlugin`
+(from `@kushex/ui`). Its `id` matches the manifest plugin ID; `agents` maps agent
+IDs to React components accepting `AgentConfigurationProps`. See `coding/ui.tsx`.
+The standalone app discovers `plugins/*/ui.tsx` at build time; rebuild it after
+adding a frontend contribution. Embedded hosts import contributions and pass them
+to `<KushexPanel agentUiPlugins={[codingUi]} />`. Components share the host React
+runtime and theme. Only install trusted UI contributions. Keep Node imports out
+of the browser entry point.
+
+The chat composer shows the selected agent's settings. Components receive `value`,
+`onChange`, `disabled`, `agentName`, and `projectId`. Values are JSON objects, kept
+separately per agent while that project's chat panel is mounted. Switching agents
+retains their values; remounting resets them. Each message snapshots those values
+into `request.configuration` for the agent's exported `chat` function, including
+debug runs. The server limits configuration to 256 KiB; each agent must validate
+its own supported settings. Existing agents can ignore this optional field.

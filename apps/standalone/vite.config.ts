@@ -10,6 +10,8 @@ const ui = (path: string) =>
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
+    // Plugin entries live outside the host package; always use the host UI runtime.
+    dedupe: ["react", "react-dom", "antd"],
     // Build the panel from source: HMR in dev, one Tailwind pass over the ui sources.
     alias: [
       { find: /^@kushex\/ui$/, replacement: ui("index.ts") },

@@ -15,6 +15,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   AgentRuntimeFactory,
+  WorkspaceEvidence,
   type ArtifactRef,
   type ArtifactWriteRequest,
   type IArtifactWriter,
@@ -24,6 +25,8 @@ import {
 import { WorkspaceTools } from "../src/tools/WorkspaceTools";
 import { CliWorkspace } from "../src/infrastructure/workspace/CliWorkspace";
 import { SandboxedCli } from "../src/infrastructure/sandbox/SandboxedCli";
+import { CodingEngineeringConfiguration } from "../src/engineering/CodingEngineeringConfiguration";
+import { codingEngineeringCatalog } from "../src/engineering/catalog";
 import { createCodingAgent } from "../src/composition/createCodingAgent";
 import { chat } from "../agent";
 import { ScriptedGateway, profile } from "./fixtures/ScriptedGateway";
@@ -75,6 +78,50 @@ async function context(signal = new AbortController().signal): Promise<IExecutio
   }).create("coding", { signal });
   return runtime.context;
 }
+
+test("workspace snapshots exclude nested dependencies and configurable generated directories", async (t) => {
+  const root = await workspace(t);
+  const paths = [
+    "apps/web/node_modules/pkg/index.js",
+    "apps/web/dist/output.js",
+    ".cache/data.txt",
+    "generated/custom.txt",
+    "src/main.ts",
+  ];
+  for (const file of paths) {
+    await mkdir(path.dirname(path.join(root, file)), { recursive: true });
+    await writeFile(path.join(root, file), "before");
+  }
+  const cases = [
+    { exclusions: undefined, files: [], expected: ["generated/custom.txt", "src/main.ts"] },
+    {
+      exclusions: ["generated"],
+      files: [],
+      expected: [".cache/data.txt", "apps/web/dist/output.js", "src/main.ts"],
+    },
+    { exclusions: [], files: [], expected: paths.filter((file) => !file.includes("node_modules")) },
+    {
+      exclusions: undefined,
+      files: ["apps/web/dist/output.js"],
+      expected: ["apps/web/dist/output.js"],
+    },
+  ];
+  for (const { exclusions, files, expected } of cases) {
+    for (const file of paths) await writeFile(path.join(root, file), "before");
+    const workspace = new CliWorkspace(root, files, exclusions);
+    const evidence = new WorkspaceEvidence(
+      (file) => workspace.read(file),
+      [],
+      new RecordingArtifactWriter(),
+      "snapshot-test",
+      new AbortController().signal,
+    );
+    await workspace.initialize(evidence);
+    for (const file of paths) await writeFile(path.join(root, file), "after");
+    await workspace.refresh(evidence);
+    assert.deepEqual([...(await evidence.status()).changedPaths].sort(), [...expected].sort());
+  }
+});
 
 test("only cli is exposed and planning has a read-only workspace", async (t) => {
   const root = await workspace(t);
@@ -360,6 +407,8 @@ test("planning mount and dependency mounts cannot be made writable in nested nam
 
 test("chat returns the standard message envelope through the Codex CLI adapter", async (t) => {
   const root = await workspace(t);
+  const artifactsDirectory = await mkdtemp(path.join(os.tmpdir(), "coding-chat-artifacts-"));
+  t.after(() => rm(artifactsDirectory, { recursive: true, force: true }));
   const executable = path.join(root, "codex-fixture.mjs");
   await copyFile(new URL("./fixtures/CodexCliFixture.mjs", import.meta.url), executable);
   await chmod(executable, 0o700);
@@ -369,6 +418,7 @@ test("chat returns the standard message envelope through the Codex CLI adapter",
     "CODEX_EXECUTABLE",
     "CODEX_HOME",
     "CODEX_MODEL",
+    "KUSHEX_ARTIFACTS_DIR",
     "OPENAI_API_KEY",
     "CODEX_API_KEY",
   ] as const;
@@ -382,13 +432,13 @@ test("chat returns the standard message envelope through the Codex CLI adapter",
   process.env.CODEX_EXECUTABLE = executable;
   process.env.CODEX_HOME = codexHome;
   process.env.CODEX_MODEL = "codex-fixture-model";
+  process.env.KUSHEX_ARTIFACTS_DIR = artifactsDirectory;
   delete process.env.OPENAI_API_KEY;
   delete process.env.CODEX_API_KEY;
   const response = await chat({
     workspace: root,
     message: "Inspect the greeting.",
     files: [],
-    artifacts: new RecordingArtifactWriter(),
     signal: new AbortController().signal,
     progress: () => {},
   });
@@ -396,4 +446,56 @@ test("chat returns the standard message envelope through the Codex CLI adapter",
   assert.equal(response.message, "Inspected the greeting without changes.");
   assert.equal(response.presentation, "message");
   assert.equal(response.snapshot.outcome?.status, "completed");
+});
+
+test("selected skills reach planning/editing and guard blockers drive a bounded repair", async (t) => {
+  const root = await workspace(t);
+  const artifacts = new RecordingArtifactWriter();
+  const engineering = new CodingEngineeringConfiguration({
+    maxFixCycles: 1,
+    overrides: Object.fromEntries(
+      codingEngineeringCatalog.map((item) => [
+        item.id,
+        {
+          guardMode: item.id === "input-validation-guard" ? "required" : "off",
+          skillMode: item.id === "readability-guard" ? "auto" : "off",
+          ...(item.id === "readability-guard"
+            ? { skillInstructions: "SKILL_MARKER: make names clear." }
+            : {}),
+        },
+      ]),
+    ),
+  });
+  const gateway = new ScriptedGateway([
+    { kind: "answered", choice: "include", supportingRefs: [] },
+    (request: ModelRequest) => {
+      assert.match(request.instructions, /SKILL_MARKER/);
+      return final(plan);
+    },
+    (request: ModelRequest) => {
+      assert.match(request.instructions, /SKILL_MARKER/);
+      return cli("printf first > greeting.txt");
+    },
+    finish,
+    { verdict: "fail", findings: [{ path: "greeting.txt", reason: "Use hello as the greeting." }] },
+    (request: ModelRequest) => {
+      assert.match(request.messages.at(-1)!.text, /Use hello as the greeting/);
+      return cli("printf hello > greeting.txt");
+    },
+    finish,
+    { verdict: "pass", findings: [] },
+  ]);
+  const run = await createCodingAgent({
+    workspace: root,
+    gateway,
+    profile,
+    artifacts,
+    engineering,
+  }).run(task);
+  assert.equal(run.snapshot.outcome?.status, "completed", JSON.stringify(run.snapshot));
+  assert.equal(await readFile(path.join(root, "greeting.txt"), "utf8"), "hello");
+  assert.equal(gateway.requests.length, 8);
+  assert.ok(
+    [...artifacts.writes.values()].some((item) => item.request.name === "coding-guard-enforcement"),
+  );
 });

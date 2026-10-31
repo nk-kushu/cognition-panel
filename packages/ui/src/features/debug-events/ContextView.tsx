@@ -1,3 +1,4 @@
+import { ExecutionDetails } from "./ExecutionDetails";
 import { Button, Empty, Segmented, Tag, Tooltip } from "antd";
 import { IconArrowNarrowDown } from "@tabler/icons-react";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
@@ -637,8 +638,10 @@ function TurnInspector({
                     {message.kind === "assistant"
                       ? "model"
                       : message.kind === "task"
-                        ? "user"
-                        : "user"}
+                        ? "task"
+                        : message.source.startsWith("tool.")
+                          ? "tool"
+                          : "runtime"}
                   </span>
                   <span className="kx:min-w-0 kx:flex-1 kx:truncate">
                     {message.kind === "task"
@@ -674,6 +677,8 @@ function TurnInspector({
           </dl>
         </Section>
       )}
+
+      <ExecutionDetails events={turn.detailEvents ?? []} />
 
       <Section title="What the turn did">
         <div className="kx:flex kx:flex-wrap kx:items-center kx:gap-1.5 kx:text-xs">

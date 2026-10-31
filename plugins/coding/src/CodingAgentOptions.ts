@@ -1,4 +1,5 @@
 import type { CodexCliOptions, IArtifactWriter, IAgentRuntimeOptions } from "kushibot";
+import type { CodingEngineeringConfiguration } from "./engineering/CodingEngineeringConfiguration";
 import type { CodingCompressionSettings } from "./context/createCodingCompression";
 
 /** Only the host can register commands; model output selects a name, never a shell string. */
@@ -10,9 +11,15 @@ export interface CodingCheck {
 /** Common run settings plus exactly one model connection choice. */
 export type CodingAgentOptions = Omit<IAgentRuntimeOptions, "gateway"> & {
   readonly workspace: string;
+  /** Opt in to DecisionUnit-selected skills and enforced reviews. Enabled by the chat host. */
+  readonly engineering?: CodingEngineeringConfiguration;
   /** Host-configured Kushibot store; change payloads are written here. */
   readonly artifacts: IArtifactWriter;
   readonly checks?: readonly CodingCheck[];
+  /** Replaces default snapshot directory exclusions; [] tracks generated folders too.
+   * .git and node_modules are always skipped. Explicit file allowlists bypass exclusions.
+   */
+  readonly excludedDirectories?: readonly string[];
   /**
    * Opt in to context compression for this agent's sessions.
    *

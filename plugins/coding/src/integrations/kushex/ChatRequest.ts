@@ -1,9 +1,9 @@
-import type { IArtifactWriter, IScopedDebugRecorderFactory } from "kushibot";
+import type { IScopedDebugRecorderFactory } from "kushibot";
 
 /** What the Kushex chat passes to `chat`; see the plugin README.md. */
 export interface ChatRequest {
   readonly message: string;
-  readonly artifacts?: IArtifactWriter;
+  readonly configuration?: Readonly<Record<string, unknown>>;
 
   /** Workspace-relative file allowlist; empty enables access throughout the workspace. */
   readonly files: readonly string[];

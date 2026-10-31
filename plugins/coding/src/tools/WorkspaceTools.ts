@@ -39,8 +39,9 @@ export class WorkspaceTools {
     private readonly checks: readonly CodingCheck[],
     private readonly runtime: AgentRunRuntime,
     artifacts: IArtifactWriter,
+    excludedDirectories?: readonly string[],
   ) {
-    this.workspace = new CliWorkspace(directory, files);
+    this.workspace = new CliWorkspace(directory, files, excludedDirectories);
     this.workspaceEvidence = new WorkspaceEvidence(
       (file) => this.workspace.read(file),
       checks,

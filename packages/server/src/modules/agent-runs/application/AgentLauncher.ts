@@ -17,6 +17,7 @@ export type AgentLaunch = Readonly<{
   /** Absolute path of the project checkout; the agent's working directory. */
   workspace: string;
   message: string;
+  configuration?: import("@kushex/contracts").AgentConfiguration;
   files: readonly string[];
   breakpoints: DebugBreakpointsDto;
   /** Stores a kushibot debug event the agent reported; it is validated, not trusted. */

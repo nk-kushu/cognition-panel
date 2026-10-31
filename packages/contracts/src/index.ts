@@ -138,11 +138,17 @@ export type NodeTypesDto = Readonly<{
   packages: readonly LibraryTypesDto[];
 }>;
 
+/** JSON settings supplied by a plugin's chat configuration component. */
+export type AgentConfiguration = Readonly<Record<string, JsonValue>>;
+export type JsonValue =
+  string | number | boolean | null | readonly JsonValue[] | { readonly [key: string]: JsonValue };
+
 /**
- * Runs one chat message through an agent from `agents/`, against a project's workspace.
+ * Runs one chat message against a project's workspace.
  * The agent's primary file must export `chat` (see plugins/README.md).
  */
 export type StartAgentRunRequest = Readonly<{
+  configuration?: AgentConfiguration;
   threadId?: string;
   agentName: string;
   message: string;
@@ -285,6 +291,8 @@ export type DebugEventDto = Readonly<{
     causationEventId: string | null;
   }>;
   payload: Readonly<{
+    /** Ordered execution content chunk, up to 1000 characters. */
+    content?: string;
     operation?: string;
     summary?: string;
     code?: string;

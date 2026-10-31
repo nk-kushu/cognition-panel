@@ -14,3 +14,11 @@ export { RepeatedObservationSummaryProvider } from "./context/RepeatedObservatio
 export { SessionContextLedger } from "./context/SessionContextLedger";
 export { createCodingCompression } from "./context/createCodingCompression";
 export type { CodingCompressionSettings } from "./context/createCodingCompression";
+
+export { CodingEngineeringConfiguration } from "./engineering/CodingEngineeringConfiguration";
+export { codingEngineeringCatalog } from "./engineering/catalog";
+export type {
+  CodingEngineeringSettings,
+  CodingEngineeringDefinition,
+  SelectionMode,
+} from "./engineering/types";

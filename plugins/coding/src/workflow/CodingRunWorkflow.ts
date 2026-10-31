@@ -23,6 +23,11 @@ import { CompressingCodingSessions } from "../context/CompressingCodingSessions"
 import { CodingWorkflow } from "./CodingWorkflow";
 import { EditingSessionPolicy } from "../steps/editing/EditingSessionPolicy";
 import { PlanningSessionPolicy } from "../steps/planning/PlanningSessionPolicy";
+import { CodingEngineeringConfiguration } from "../engineering/CodingEngineeringConfiguration";
+import { CodingEngineeringModel } from "../engineering/CodingEngineeringModel";
+import { CodingEngineeringSelection } from "../engineering/CodingEngineeringSelection";
+import { CodingReviewArtifacts } from "../engineering/CodingReviewArtifacts";
+import { CodingGuardReview } from "../engineering/CodingGuardReview";
 import { WorkspaceTools } from "../tools/WorkspaceTools";
 
 /**
@@ -63,6 +68,8 @@ export class CodingRunWorkflow implements IPolicy<
       modelTimeoutMs: number;
     }> | null = null,
     private readonly compression: CodingAgentOptions["compression"] = undefined,
+    private readonly excludedDirectories?: readonly string[],
+    private readonly engineering?: CodingEngineeringConfiguration,
   ) {
     if (
       checks.length > 16 ||
@@ -96,17 +103,47 @@ export class CodingRunWorkflow implements IPolicy<
 
     // Create tools per run so file snapshots, edits, and check results cannot leak
     // between tasks. Use the runtime's budget and clock to share its run limits.
+    const reviewArtifacts = new CodingReviewArtifacts(this.artifacts, runtime);
     const tools = new WorkspaceTools(
       this.workspace,
       task.filePaths,
       this.checks,
       runtime,
-      this.artifacts,
+      reviewArtifacts,
+      this.excludedDirectories,
     );
 
     // Capture the original files before planning: completion compares against
     // this baseline to verify which files actually changed.
     await tools.initialize();
+    let guidance = "";
+    let guardReview: CodingGuardReview | undefined;
+    if (this.engineering?.settings.enabled) {
+      if (!this.model) throw new Error("Engineering selection requires a model connection.");
+      const model = new CodingEngineeringModel(
+        runtime,
+        this.model.gateway,
+        this.model.profile,
+        this.model.modelTimeoutMs,
+      );
+      const selection = new CodingEngineeringSelection(
+        this.engineering.settings.definitions,
+        model.decisions,
+        runtime,
+        reviewArtifacts,
+        this.model.modelTimeoutMs,
+      );
+      guidance = await selection.skills(task.goal);
+      guardReview = new CodingGuardReview(
+        this.engineering,
+        selection,
+        model,
+        tools,
+        reviewArtifacts,
+        runtime,
+        task.goal,
+      );
+    }
 
     // Planning returns a TaskInput-shaped plan; editing returns an EditingResult.
     // Contracts validate these model outputs before the workflow can accept them.
@@ -116,13 +153,17 @@ export class CodingRunWorkflow implements IPolicy<
 
     // Bind both sessions to the same workspace evidence. Planning gets read-only
     // tools; editing gets the accepted plan plus write/check tools. The workflow
-    // declares the plan → edit dependency; no model calls happen during setup.
+    // declares the plan → edit dependency; skill selection above is recorded separately.
     //
     // Each step gets its own session, so each gets its own context ledger: planning
     // observations can never be compressed into the editing context.
     const workflow = new CodingWorkflow(
-      this.taskFactory(runtime, taskContract, new PlanningSessionPolicy(runtime, tools)),
-      this.taskFactory(runtime, editingResultContract, new EditingSessionPolicy(runtime, tools)),
+      this.taskFactory(runtime, taskContract, new PlanningSessionPolicy(runtime, tools, guidance)),
+      this.taskFactory(
+        runtime,
+        editingResultContract,
+        new EditingSessionPolicy(runtime, tools, guidance, guardReview),
+      ),
       runtime.clock,
     ).create();
 
@@ -139,7 +180,9 @@ export class CodingRunWorkflow implements IPolicy<
           run.accepted.find((item) => item.stepId === "edit")?.result,
         );
 
-        return result.valid && (await tools.accepts(result.value))
+        return result.valid &&
+          (await tools.accepts(result.value)) &&
+          (!guardReview || (await guardReview.approved(result.value)))
           ? { accepted: true }
           : {
               accepted: false,
@@ -178,7 +221,7 @@ export class CodingRunWorkflow implements IPolicy<
       // Agent validates the mapped public result with this contract too.
       resultContract: editingResultContract,
       // Return store references; payloads live in the host-configured artifact store.
-      artifacts: () => tools.evidence(),
+      artifacts: () => ({ ...tools.evidence(), ...reviewArtifacts.evidence() }),
     };
   }
 

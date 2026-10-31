@@ -50,6 +50,13 @@ export class AgentRunsController implements HttpController {
               threadId: z.uuid().optional(),
               message: z.string().trim().min(1).max(8000),
               files: z.array(workspaceFile).max(16),
+              configuration: z
+                .record(z.string(), z.json())
+                .refine(
+                  (value) => Buffer.byteLength(JSON.stringify(value), "utf8") <= 262_144,
+                  "Agent configuration must be at most 256 KiB.",
+                )
+                .optional(),
               debug: z.boolean(),
               breakpoints: z.record(agentFile, lines).optional(),
             })

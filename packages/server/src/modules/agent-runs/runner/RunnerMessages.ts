@@ -5,6 +5,7 @@ export type RunnerCommand =
       entry: string;
       workspace: string;
       message: string;
+      configuration?: import("@kushex/contracts").AgentConfiguration;
       files: readonly string[];
     }>
   /** Calls the loaded agent's `chat`; sent once the debugger has bound its breakpoints. */

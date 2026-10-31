@@ -12,6 +12,7 @@ import { KUSHIBOT_ENTRY_ENV, type RunnerCommand, type RunnerReport } from "./Run
 /** What an agent's `chat` export receives; documented in plugins/README.md. */
 type ChatRequest = Readonly<{
   message: string;
+  configuration: import("@kushex/contracts").AgentConfiguration;
   files: readonly string[];
   workspace: string;
   signal: AbortSignal;
@@ -81,6 +82,7 @@ async function run(command: Extract<RunnerCommand, { type: "start" }>): Promise<
     const request: ChatRequest = {
       message: command.message,
       files: command.files,
+      configuration: command.configuration ?? {},
       workspace: command.workspace,
       signal: controller.signal,
       progress: (message) => void report({ type: "progress", message: String(message) }),

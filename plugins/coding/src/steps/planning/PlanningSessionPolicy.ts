@@ -16,6 +16,7 @@ export class PlanningSessionPolicy implements IPolicy<
   constructor(
     private readonly runtime: AgentRunRuntime,
     private readonly workspaceTools: WorkspaceTools,
+    private readonly guidance = "",
   ) {}
 
   async apply(request: AgentTaskBindingRequest): Promise<IAgentSessionBinding<TaskInput>> {
@@ -29,6 +30,7 @@ export class PlanningSessionPolicy implements IPolicy<
       input: input.value,
       instructions: [
         request.assignment.instructions,
+        this.guidance,
         this.workspaceTools.description(true),
         'Final value: {"goal":"ordered plan, <=2048 characters","acceptanceCriteria":["outcomes/checks"],"filePaths":["permitted target"],"sourceRefs":[]}. Inspect files before planning.',
       ].join("\n"),

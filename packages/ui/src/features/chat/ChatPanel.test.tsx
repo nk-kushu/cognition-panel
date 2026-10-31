@@ -582,3 +582,37 @@ it("checks a lost apply response without sending a second approval", async () =>
   expect(api.proposalApplies).toHaveLength(1);
   expect(api.proposalChecks).toHaveLength(1);
 });
+
+it("renders the owning plugin's settings and sends their values with the message", async () => {
+  const agent = { ...exampleAgent, plugin: { id: "example", name: "Example" } };
+  const api = mockKushexApi([exampleProject], [agent]);
+  const user = userEvent.setup();
+  render(
+    <KushexPanel
+      agentUiPlugins={[
+        {
+          id: "example",
+          agents: {
+            reviewer: ({ value, onChange }) => (
+              <input
+                aria-label="Review mode"
+                value={String(value.mode ?? "")}
+                onChange={(event) => onChange({ mode: event.target.value })}
+              />
+            ),
+          },
+        },
+      ]}
+    />,
+  );
+  await user.click(await screen.findByRole("button", { name: "Open Project one" }));
+  await chooseAgent(user, "reviewer · Example");
+  await user.click(screen.getByRole("button", { name: "Configure agent" }));
+  await user.type(screen.getByLabelText("Review mode"), "thorough");
+  await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }));
+  await user.type(screen.getByLabelText("Message"), "Review this");
+  await user.click(screen.getByRole("button", { name: "Send" }));
+  await waitFor(() => expect(api.runs).toHaveLength(1));
+  expect(api.runs[0]).toMatchObject({ configuration: { mode: "thorough" } });
+  FakeEventSource.of("run-1").emit({ type: "status", status: "completed" });
+});
