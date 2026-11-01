@@ -1,501 +1,654 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import {
-  chmod,
-  copyFile,
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import test from "node:test";
-import {
-  AgentRuntimeFactory,
-  WorkspaceEvidence,
-  type ArtifactRef,
-  type ArtifactWriteRequest,
-  type IArtifactWriter,
-  type IExecutionContext,
-  type ModelRequest,
-} from "kushibot";
-import { WorkspaceTools } from "../src/tools/WorkspaceTools";
-import { CliWorkspace } from "../src/infrastructure/workspace/CliWorkspace";
-import { SandboxedCli } from "../src/infrastructure/sandbox/SandboxedCli";
-import { CodingEngineeringConfiguration } from "../src/engineering/CodingEngineeringConfiguration";
-import { codingEngineeringCatalog } from "../src/engineering/catalog";
-import { createCodingAgent } from "../src/composition/createCodingAgent";
-import { chat } from "../agent";
-import { ScriptedGateway, profile } from "./fixtures/ScriptedGateway";
+import type { ModelRequest } from "kushibot";
+import type { GuardDefinition, SkillDefinition } from "../src/engineering/types";
+import { defaultCodingSettings } from "../src/engineering/types";
+import { CodingHarness, defaultDecisions } from "./fixtures/CodingHarness";
+import { ScriptedGateway, cli, done, final, observation } from "./fixtures/ScriptedGateway";
 
-class RecordingArtifactWriter implements IArtifactWriter {
-  readonly writes = new Map<string, { reference: ArtifactRef; request: ArtifactWriteRequest }>();
-  async write(request: ArtifactWriteRequest): Promise<ArtifactRef> {
-    const prior = this.writes.get(request.idempotencyKey);
-    if (prior) return prior.reference;
-    const reference: ArtifactRef = {
-      artifactId: `stored-${this.writes.size + 1}`,
-      digest: createHash("sha256").update(request.data).digest("hex"),
-      byteLength: request.data.byteLength,
-      mediaType: request.mediaType,
-      schemaId: request.schemaId,
-      schemaVersion: request.schemaVersion,
-    };
-    this.writes.set(request.idempotencyKey, { reference, request });
-    return reference;
-  }
+const QUESTIONS = "Decide what must be understood";
+const PREPARE = "Work out what must be checked";
+const DISCOVER = "Propose the project files";
+const READ = "Read the selected files";
+const CHECK = "Check whether the findings";
+const PLAN = "Decide what to build";
+const TESTS = "Write tests for one planned behavior";
+const SKELETON = "Create the proposed structure";
+const IMPLEMENT = "Implement one small change";
+const REPAIR = "Fix the problem in this failure report";
+const ANSWER = "Answer the user simply";
+
+const SOURCE = "src/token.ts";
+const TEST_FILE = "src/token.test.ts";
+const STUB = `export const version = 1;
+
+export function validateToken(token: string): boolean {
+  throw new Error("Not implemented");
 }
+`;
+const IMPLEMENTED = STUB.replace('throw new Error("Not implemented");', "return token.length > 0;");
 
-const task = {
-  goal: "Change the greeting",
-  acceptanceCriteria: ["Greeting is hello"],
-  filePaths: ["greeting.txt"],
-  sourceRefs: [],
-};
-const plan = { ...task, goal: "Inspect and update greeting.txt, then verify." };
-const cli = (command: string) => ({ kind: "tool", toolId: "cli", arguments: { command } });
-const final = (value: unknown) => ({ kind: "final", value });
-const finish = (request: ModelRequest) => {
-  const observation = JSON.parse(request.messages.at(-1)!.text).observation.value;
-  assert.equal(observation.error, undefined, JSON.stringify(observation));
-  return final({ ...observation.status, summary: "Updated greeting." });
-};
+const write = (file: string, content: string) =>
+  cli(`mkdir -p $(dirname ${file}) && cat > ${file} <<'KUSHEX_EOF'\n${content}KUSHEX_EOF`);
 
-async function workspace(t: test.TestContext) {
-  const root = await mkdtemp(path.join(os.tmpdir(), "coding-cli-test-"));
-  t.after(() => rm(root, { recursive: true, force: true }));
-  await writeFile(path.join(root, "greeting.txt"), "old");
-  return root;
-}
-
-async function context(signal = new AbortController().signal): Promise<IExecutionContext> {
-  const runtime = await new AgentRuntimeFactory({
-    gateway: new ScriptedGateway([]),
-    profile,
-  }).create("coding", { signal });
-  return runtime.context;
-}
-
-test("workspace snapshots exclude nested dependencies and configurable generated directories", async (t) => {
-  const root = await workspace(t);
-  const paths = [
-    "apps/web/node_modules/pkg/index.js",
-    "apps/web/dist/output.js",
-    ".cache/data.txt",
-    "generated/custom.txt",
-    "src/main.ts",
-  ];
-  for (const file of paths) {
-    await mkdir(path.dirname(path.join(root, file)), { recursive: true });
-    await writeFile(path.join(root, file), "before");
-  }
-  const cases = [
-    { exclusions: undefined, files: [], expected: ["generated/custom.txt", "src/main.ts"] },
+const plan = {
+  summary: "Add validateToken.",
+  tests: [{ id: "t1", behavior: "Empty tokens are invalid", type: "unit", files: [TEST_FILE] }],
+  components: [
     {
-      exclusions: ["generated"],
-      files: [],
-      expected: [".cache/data.txt", "apps/web/dist/output.js", "src/main.ts"],
+      id: "c1",
+      description: "Validation",
+      file: SOURCE,
+      signatures: ["validateToken(token: string): boolean"],
     },
-    { exclusions: [], files: [], expected: paths.filter((file) => !file.includes("node_modules")) },
-    {
-      exclusions: undefined,
-      files: ["apps/web/dist/output.js"],
-      expected: ["apps/web/dist/output.js"],
-    },
-  ];
-  for (const { exclusions, files, expected } of cases) {
-    for (const file of paths) await writeFile(path.join(root, file), "before");
-    const workspace = new CliWorkspace(root, files, exclusions);
-    const evidence = new WorkspaceEvidence(
-      (file) => workspace.read(file),
-      [],
-      new RecordingArtifactWriter(),
-      "snapshot-test",
-      new AbortController().signal,
-    );
-    await workspace.initialize(evidence);
-    for (const file of paths) await writeFile(path.join(root, file), "after");
-    await workspace.refresh(evidence);
-    assert.deepEqual([...(await evidence.status()).changedPaths].sort(), [...expected].sort());
-  }
+  ],
+  changes: [
+    { id: "m1", description: "Validate the token", file: SOURCE, symbols: ["validateToken"] },
+  ],
+  packages: [],
+};
+const reading = {
+  answered: true,
+  answer: "Tokens live in src/token.ts.",
+  sources: [SOURCE],
+  missing: "",
+};
+
+/** Every session of one straight-through code change. */
+const happyPath = (overrides: Readonly<Record<string, readonly unknown[]>> = {}) => ({
+  [QUESTIONS]: [done({ questions: [{ question: "Where are tokens?", why: "To change them." }] })],
+  [DISCOVER]: [cli("find . -type f"), done({ paths: [SOURCE] })],
+  [READ]: [cli(`cat ${SOURCE}`), done(reading)],
+  [CHECK]: [done({ verdict: "ready", question: "" })],
+  [PLAN]: [done(plan)],
+  [TESTS]: [write(TEST_FILE, "test('x', () => {});\n"), done({ summary: "Added." })],
+  [SKELETON]: [write(SOURCE, STUB), done({ summary: "Declared." })],
+  [IMPLEMENT]: [write(SOURCE, IMPLEMENTED), done({ summary: "Implemented." })],
+  ...overrides,
 });
 
-test("only cli is exposed and planning has a read-only workspace", async (t) => {
-  const root = await workspace(t);
-  const runtime = await new AgentRuntimeFactory({
-    gateway: new ScriptedGateway([]),
-    profile,
-  }).create("coding");
-  const tools = new WorkspaceTools(root, [], [], runtime, new RecordingArtifactWriter());
-  await tools.initialize();
-  assert.match(tools.description(true), /cli/);
-  assert.doesNotMatch(tools.description(true), /list_files|read_file|write_file|run_check/);
-  const result = await new SandboxedCli().run(
-    root,
-    ["/bin/sh", "-c", "printf forbidden > greeting.txt"],
-    true,
-    runtime.context,
-  );
-  assert.notEqual(result.exitCode, 0);
-  assert.equal(await readFile(path.join(root, "greeting.txt"), "utf8"), "old");
+const suite = (script: string) => ({
+  id: "unit",
+  type: "unit",
+  name: "Unit",
+  command: "/bin/sh",
+  args: ["-c", script],
+  workingDirectory: ".",
+  timeoutMs: 10_000,
+  enabled: true,
+});
+const withTests = (script = "grep -q 'token.length' src/token.ts") => ({
+  settings: { testTypes: ["unit"], testSuites: [suite(script)] },
 });
 
-test("sandbox cannot read host files, inherit credentials, use network, or write outside workspace", async (t) => {
-  const root = await workspace(t);
-  const outside = path.join(path.dirname(root), `${path.basename(root)}-secret`);
-  await writeFile(outside, "secret");
-  t.after(() => rm(outside, { force: true }));
-  process.env.KUSHEX_CLI_TEST_SECRET = "must-not-be-visible";
-  t.after(() => {
-    delete process.env.KUSHEX_CLI_TEST_SECRET;
-  });
-  const script = `
-    const fs = require('node:fs');
-    const net = require('node:net');
-    const assert = require('node:assert/strict');
-    assert.equal(process.env.KUSHEX_CLI_TEST_SECRET, undefined);
-    assert.throws(() => fs.readFileSync(${JSON.stringify(outside)}));
-    assert.throws(() => fs.writeFileSync('/usr/escape', 'no'));
-    assert.throws(() => fs.readFileSync('/codex/auth.json'));
-    const socket = net.connect({host:'1.1.1.1', port:80});
-    socket.on('connect', () => process.exit(2));
-    socket.on('error', () => { console.log('isolated'); });
-    setTimeout(() => { socket.destroy(); console.log('isolated'); }, 150);
-  `;
-  const result = await new SandboxedCli().run(
-    root,
-    [process.execPath, "-e", script],
-    false,
-    await context(),
-  );
-  assert.equal(result.exitCode, 0, result.output);
-  assert.match(result.output, /isolated/);
-  assert.equal(await readFile(outside, "utf8"), "secret");
-});
-
-test("restricted tasks cannot read other workspace files or retain unauthorized additions", async (t) => {
-  const root = await workspace(t);
-  await writeFile(path.join(root, "other.txt"), "secret");
-  const projection = new CliWorkspace(root, ["greeting.txt", "new.txt"]);
-  const sandbox = new SandboxedCli();
-  const execution = await context();
-  const result = await projection.execute(false, (directory) =>
-    sandbox.run(
-      directory,
-      [
-        "/bin/sh",
-        "-c",
-        "test ! -e other.txt && printf hello > greeting.txt && printf new > new.txt",
-      ],
-      false,
-      execution,
-    ),
-  );
-  assert.equal(result.exitCode, 0, result.output);
-  assert.equal(await readFile(path.join(root, "greeting.txt"), "utf8"), "hello");
-  await assert.rejects(
-    projection.execute(false, (directory) =>
-      sandbox.run(directory, ["/bin/sh", "-c", "printf forbidden > other.txt"], false, execution),
-    ),
-    /outside the task allowlist/,
-  );
-  assert.equal(await readFile(path.join(root, "other.txt"), "utf8"), "secret");
-});
-
-test("plan then CLI editing updates the supplied workspace and automatically verifies checks", async (t) => {
-  const root = await workspace(t);
-  const artifacts = new RecordingArtifactWriter();
-  const gateway = new ScriptedGateway([
-    cli("cat greeting.txt"),
-    final(plan),
-    cli("printf hello > greeting.txt"),
-    finish,
-  ]);
-  const run = await createCodingAgent({
-    workspace: root,
-    gateway,
-    profile,
-    artifacts,
-    checks: [
-      { id: "greeting", command: "/bin/sh", args: ["-c", 'test "$(cat greeting.txt)" = hello'] },
+test("answers a question read-only, without planning, and leaves the project alone", async (t) => {
+  const gateway = new ScriptedGateway({
+    [PREPARE]: [done({ questions: [{ question: "What is version?", why: "Asked." }] })],
+    [DISCOVER]: [done({ paths: [SOURCE] })],
+    [READ]: [
+      cli(`echo changed > ${SOURCE}; cat ${SOURCE}`),
+      (request: ModelRequest) => {
+        const output = observation(request);
+        assert.match(String(output.output), /Read-only|version/i);
+        return done(reading);
+      },
     ],
-  }).run(task);
-  assert.equal(run.snapshot.outcome?.status, "completed", JSON.stringify(run.snapshot));
-  assert.equal(await readFile(path.join(root, "greeting.txt"), "utf8"), "hello");
-  assert.equal("workingCopy" in run.artifacts, false);
-  assert.deepEqual(run.result?.changedPaths, ["greeting.txt"]);
-  assert.deepEqual(run.result?.unresolved, []);
-  assert.equal(artifacts.writes.size, 1);
-  assert.deepEqual(
-    JSON.parse(Buffer.from([...artifacts.writes.values()][0]!.request.data).toString()),
-    { path: "greeting.txt", before: "old", after: "hello" },
-  );
-});
-
-test("CLI tracks new and deleted files without prior file-tool reads", async (t) => {
-  const root = await workspace(t);
-  const gateway = new ScriptedGateway([
-    final({ ...plan, filePaths: [] }),
-    cli("rm greeting.txt && mkdir src && printf hello > src/new.txt"),
-    finish,
-  ]);
-  const run = await createCodingAgent({
-    workspace: root,
-    gateway,
-    profile,
-    artifacts: new RecordingArtifactWriter(),
-  }).run({ ...task, filePaths: [] });
-  assert.equal(run.snapshot.outcome?.status, "completed", JSON.stringify(run.snapshot));
-  assert.deepEqual(run.result?.changedPaths, ["greeting.txt", "src/new.txt"]);
-  await assert.rejects(readFile(path.join(root, "greeting.txt")), { code: "ENOENT" });
-  assert.equal(await readFile(path.join(root, "src/new.txt"), "utf8"), "hello");
-});
-
-test("failed checks remain unresolved and an earlier success does not cover a later edit", async (t) => {
-  const root = await workspace(t);
-  const runtime = await new AgentRuntimeFactory({
-    gateway: new ScriptedGateway([]),
-    profile,
-  }).create("coding");
-  const tools = new WorkspaceTools(
-    root,
-    ["greeting.txt"],
-    [{ id: "greeting", command: "/bin/sh", args: ["-c", 'test "$(cat greeting.txt)" = hello'] }],
-    runtime,
-    new RecordingArtifactWriter(),
-  );
-  await tools.initialize();
-  const dispatcher = tools.bind(false);
-  const execute = (id: string, command: string) =>
-    dispatcher.dispatch(
-      { operationId: id, toolId: "cli", arguments: { command } },
-      { ...runtime.context, identity: { ...runtime.context.identity, operationId: id } },
-    );
-  assert.equal((await execute("write-hello", "printf hello > greeting.txt")).status, "completed");
-  assert.deepEqual((await tools.status()).unresolved, []);
-  await execute("write-bad", "printf bad > greeting.txt");
-  assert.match((await tools.status()).unresolved[0]!, /has not passed/);
-});
-
-test("CLI rejects malformed arguments and completed operations replay without rerunning", async (t) => {
-  const root = await workspace(t);
-  const runtime = await new AgentRuntimeFactory({
-    gateway: new ScriptedGateway([]),
-    profile,
-  }).create("coding");
-  const tools = new WorkspaceTools(root, [], [], runtime, new RecordingArtifactWriter());
-  await tools.initialize();
-  const dispatcher = tools.bind(false);
-  const dispatch = (id: string, args: unknown) =>
-    dispatcher.dispatch(
-      { operationId: id, toolId: "cli", arguments: args },
-      { ...runtime.context, identity: { ...runtime.context.identity, operationId: id } },
-    );
-  assert.deepEqual(await dispatch("bad", {}), {
-    status: "rejected",
-    code: "TOOL_ARGUMENTS_INVALID",
+    [ANSWER]: [done({ answer: "**What it does:** holds the version." })],
   });
-  const call = {
-    operationId: "append-once",
-    toolId: "cli",
-    arguments: { command: "printf x >> greeting.txt" },
+  const harness = await CodingHarness.create(t, gateway, {}, (request) =>
+    request.purpose === "choose-request-mode" ? "answer-only" : defaultDecisions(request),
+  );
+  const value = await harness.send("How does the token version work?");
+  assert.equal(value.presentation, "message");
+  assert.match(value.message, /What it does/);
+  assert.equal(await harness.original(SOURCE), "export const version = 1;\n");
+  assert.deepEqual(gateway.remaining(), []);
+  assert.equal(gateway.sessions(PLAN), 0);
+});
+
+test("an explicit choice skips JEV classification", async (t) => {
+  const gateway = new ScriptedGateway({
+    [PREPARE]: [done({ questions: [] })],
+    [ANSWER]: [done({ answer: "Hello." })],
+  });
+  const harness = await CodingHarness.create(t, gateway);
+  const value = await harness.send("Can you fix login?", { mode: "answer-only" });
+  assert.equal(value.message, "Hello.");
+  assert.ok(!harness.decisions.asked.includes("choose-request-mode"));
+});
+
+test("does not guess the mode when JEV is unavailable", async (t) => {
+  const harness = await CodingHarness.create(t, new ScriptedGateway({}));
+  harness.decisions.evaluate = async () => ({ status: "unavailable", code: "DOWN" });
+  const value = await harness.send("Fix login");
+  assert.equal(value.presentation, "message");
+  assert.match(value.message, /not guessed/);
+});
+
+test("waits for clarification and stops at the limit", async (t) => {
+  const gateway = new ScriptedGateway({});
+  const harness = await CodingHarness.create(
+    t,
+    gateway,
+    { settings: { limits: { ...defaultCodingSettings.limits, clarifications: 1 } } },
+    () => "needs-clarification",
+  );
+  const first = await harness.send("login");
+  assert.equal(first.presentation, "wait");
+  assert.equal(first.wait?.kind, "clarification");
+  const second = await harness.answer(first, { text: "hmm, not sure" });
+  assert.equal(second.presentation, "message");
+  assert.match(second.message, /clarification return limit/);
+});
+
+test("runs the whole workflow: approval, implementation, guards, tests, delivery", async (t) => {
+  const gateway = new ScriptedGateway(happyPath());
+  const guard: GuardDefinition = {
+    id: "lint",
+    versionId: "v1",
+    name: "Lint",
+    purpose: "Lints.",
+    type: "deterministic",
+    phases: ["guards"],
+    selection: "required",
+    blocking: true,
+    reviewInstructions: "",
+    model: "",
+    check: {
+      command: "/bin/sh",
+      args: ["-c", "test -f src/token.ts"],
+      script: "",
+      workingDirectory: ".",
+      timeoutMs: 10_000,
+      successExitCodes: [0],
+    },
   };
-  const first = await dispatch(call.operationId, call.arguments);
-  assert.equal(first.status, "completed");
-  const replay = await dispatch(call.operationId, call.arguments);
-  assert.equal(replay.status, "completed");
-  if (first.status === "completed" && replay.status === "completed") {
-    assert.equal(replay.replayed, true);
-    assert.deepEqual(replay.observation, first.observation);
-  }
-  assert.equal(await readFile(path.join(root, "greeting.txt"), "utf8"), "oldx");
+  const harness = await CodingHarness.create(t, gateway, { ...withTests(), guards: [guard] });
+  const waiting = await harness.send("Add token validation");
+  assert.equal(waiting.presentation, "wait", waiting.message);
+  assert.equal(waiting.wait?.kind, "skeleton-review");
+  assert.deepEqual(waiting.wait?.payload.notLanguageChecked, []);
+  assert.equal(gateway.sessions(IMPLEMENT), 0, "Nothing is implemented before approval.");
+
+  const finished = await harness.approve(waiting);
+  assert.equal(finished.presentation, "changes", finished.message);
+  assert.deepEqual([...finished.result!.changedPaths].sort(), [TEST_FILE, SOURCE].sort());
+  assert.equal(finished.result!.changeArtifactRefs.length, 2);
+  for (const ref of finished.result!.changeArtifactRefs) assert.ok(finished.artifacts[ref]);
+  // Delivery is a proposal: the run edits its own copy, never the project.
+  assert.equal(await harness.original(SOURCE), "export const version = 1;\n");
+  assert.deepEqual(gateway.remaining(), []);
 });
 
-test("CLI output is bounded and cancellation terminates its sandbox", async (t) => {
-  const root = await workspace(t);
-  const sandbox = new SandboxedCli();
-  const output = await sandbox.run(
-    root,
-    [process.execPath, "-e", "process.stdout.write('x'.repeat(100000))"],
-    true,
-    await context(),
-  );
-  assert.equal(output.exitCode, 0, output.output);
-  assert.equal(output.truncated, true);
-  assert.equal(Buffer.byteLength(output.output), 16_384);
-  const controller = new AbortController();
-  const execution = await context(controller.signal);
-  const pending = sandbox.run(
-    root,
-    ["/bin/sh", "-c", "sleep 30; printf escaped > greeting.txt"],
-    false,
-    execution,
-  );
-  const timer = setTimeout(() => controller.abort(), 150);
-  const result = await pending;
-  clearTimeout(timer);
-  assert.notEqual(result.exitCode, 0);
-  assert.equal(await readFile(path.join(root, "greeting.txt"), "utf8"), "old");
-});
-
-test("background descendants cannot continue editing after CLI returns", async (t) => {
-  const root = await workspace(t);
-  const result = await new SandboxedCli().run(
-    root,
-    ["/bin/sh", "-c", "(sleep 0.2; printf escaped > greeting.txt) >/dev/null 2>&1 &"],
-    false,
-    await context(),
-  );
-  assert.equal(result.exitCode, 0, result.output);
-  await new Promise((resolve) => setTimeout(resolve, 350));
-  assert.equal(await readFile(path.join(root, "greeting.txt"), "utf8"), "old");
-});
-
-test("review rejects symlinks and unsupported binary files", async (t) => {
-  const root = await workspace(t);
-  await symlink("/etc/passwd", path.join(root, "link"));
-  await assert.rejects(new CliWorkspace(root, ["link"]).read("link"), /Symlink/);
-  await writeFile(path.join(root, "binary"), Buffer.from([0, 1]));
-  await assert.rejects(new CliWorkspace(root, ["binary"]).read("binary"), /binary/);
-});
-
-test("the CLI cannot see the backend source mount", async (t) => {
-  const root = await workspace(t);
-  const result = await new SandboxedCli().run(
-    root,
-    ["/bin/sh", "-c", "test ! -e /source/kushex/package.json"],
-    true,
-    await context(),
-  );
-  assert.equal(result.exitCode, 0, result.output);
-});
-
-test("unchanged binary and large files do not block coding; unsupported changes cannot be accepted", async (t) => {
-  const root = await workspace(t);
-  await writeFile(path.join(root, "image.bin"), Buffer.from([0, 1, 2]));
-  await writeFile(path.join(root, "large.lock"), "x".repeat(100_000));
-  const runtime = await new AgentRuntimeFactory({
-    gateway: new ScriptedGateway([]),
-    profile,
-  }).create("coding");
-  const tools = new WorkspaceTools(root, [], [], runtime, new RecordingArtifactWriter());
-  await tools.initialize();
-  assert.deepEqual((await tools.status()).changedPaths, []);
-  await writeFile(path.join(root, "large.lock"), "modified");
-  await assert.rejects(tools.status(), /unsupported by change review/);
-});
-
-test("planning mount and dependency mounts cannot be made writable in nested namespaces", async (t) => {
-  const root = await workspace(t);
-  const sandbox = new SandboxedCli();
-  const result = await sandbox.run(
-    root,
-    [
-      "/bin/sh",
-      "-c",
-      "unshare -Urnm /bin/sh -c 'mount -o remount,rw /workspace && printf escaped > /workspace/greeting.txt'",
-    ],
-    true,
-    await context(),
-  );
-  assert.notEqual(result.exitCode, 0, result.output);
-  assert.equal(await readFile(path.join(root, "greeting.txt"), "utf8"), "old");
-});
-
-test("chat returns the standard message envelope through the Codex CLI adapter", async (t) => {
-  const root = await workspace(t);
-  const artifactsDirectory = await mkdtemp(path.join(os.tmpdir(), "coding-chat-artifacts-"));
-  t.after(() => rm(artifactsDirectory, { recursive: true, force: true }));
-  const executable = path.join(root, "codex-fixture.mjs");
-  await copyFile(new URL("./fixtures/CodexCliFixture.mjs", import.meta.url), executable);
-  await chmod(executable, 0o700);
-  const codexHome = path.join(root, "codex-home");
-  await mkdir(codexHome);
-  const keys = [
-    "CODEX_EXECUTABLE",
-    "CODEX_HOME",
-    "CODEX_MODEL",
-    "KUSHEX_ARTIFACTS_DIR",
-    "OPENAI_API_KEY",
-    "CODEX_API_KEY",
-  ] as const;
-  const previous = new Map(keys.map((key) => [key, process.env[key]]));
-  t.after(() => {
-    for (const [key, value] of previous) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-  });
-  process.env.CODEX_EXECUTABLE = executable;
-  process.env.CODEX_HOME = codexHome;
-  process.env.CODEX_MODEL = "codex-fixture-model";
-  process.env.KUSHEX_ARTIFACTS_DIR = artifactsDirectory;
-  delete process.env.OPENAI_API_KEY;
-  delete process.env.CODEX_API_KEY;
-  const response = await chat({
-    workspace: root,
-    message: "Inspect the greeting.",
-    files: [],
-    signal: new AbortController().signal,
-    progress: () => {},
-  });
-  assert.equal(response.schemaVersion, 1);
-  assert.equal(response.message, "Inspected the greeting without changes.");
-  assert.equal(response.presentation, "message");
-  assert.equal(response.snapshot.outcome?.status, "completed");
-});
-
-test("selected skills reach planning/editing and guard blockers drive a bounded repair", async (t) => {
-  const root = await workspace(t);
-  const artifacts = new RecordingArtifactWriter();
-  const engineering = new CodingEngineeringConfiguration({
-    maxFixCycles: 1,
-    overrides: Object.fromEntries(
-      codingEngineeringCatalog.map((item) => [
-        item.id,
-        {
-          guardMode: item.id === "input-validation-guard" ? "required" : "off",
-          skillMode: item.id === "readability-guard" ? "auto" : "off",
-          ...(item.id === "readability-guard"
-            ? { skillInstructions: "SKILL_MARKER: make names clear." }
-            : {}),
+test("rejected skeletons return, and approval needs the new version", async (t) => {
+  const revised = STUB.replace("boolean", "boolean | null");
+  const gateway = new ScriptedGateway(
+    happyPath({
+      [SKELETON]: [
+        write(SOURCE, STUB),
+        done({ summary: "First." }),
+        (request: ModelRequest) => {
+          assert.match(request.messages[0]!.text, /Return null for bad tokens/);
+          return write(SOURCE, revised);
         },
-      ]),
-    ),
-  });
-  const gateway = new ScriptedGateway([
-    { kind: "answered", choice: "include", supportingRefs: [] },
-    (request: ModelRequest) => {
-      assert.match(request.instructions, /SKILL_MARKER/);
-      return final(plan);
-    },
-    (request: ModelRequest) => {
-      assert.match(request.instructions, /SKILL_MARKER/);
-      return cli("printf first > greeting.txt");
-    },
-    finish,
-    { verdict: "fail", findings: [{ path: "greeting.txt", reason: "Use hello as the greeting." }] },
-    (request: ModelRequest) => {
-      assert.match(request.messages.at(-1)!.text, /Use hello as the greeting/);
-      return cli("printf hello > greeting.txt");
-    },
-    finish,
-    { verdict: "pass", findings: [] },
-  ]);
-  const run = await createCodingAgent({
-    workspace: root,
-    gateway,
-    profile,
-    artifacts,
-    engineering,
-  }).run(task);
-  assert.equal(run.snapshot.outcome?.status, "completed", JSON.stringify(run.snapshot));
-  assert.equal(await readFile(path.join(root, "greeting.txt"), "utf8"), "hello");
-  assert.equal(gateway.requests.length, 8);
-  assert.ok(
-    [...artifacts.writes.values()].some((item) => item.request.name === "coding-guard-enforcement"),
+        done({ summary: "Second." }),
+      ],
+      [IMPLEMENT]: [
+        write(SOURCE, revised.replace('throw new Error("Not implemented");', "return null;")),
+        done({ summary: "Done." }),
+      ],
+    }),
   );
+  const harness = await CodingHarness.create(t, gateway, withTests());
+  const first = await harness.send("Add token validation");
+  const second = await harness.answer(first, {
+    choice: "request-changes",
+    text: "Return null for bad tokens",
+  });
+  assert.equal(second.wait?.kind, "skeleton-review");
+  assert.notEqual(second.wait?.payload.digest, first.wait?.payload.digest);
+  const stale = await harness.answer(second, {
+    choice: "approve",
+    digest: String(first.wait!.payload.digest),
+  });
+  assert.equal(stale.presentation, "message");
+  assert.match(stale.message, /does not match/);
+});
+
+test("code changes outside an assignment are restored, and skeleton bodies are refused", async (t) => {
+  const gateway = new ScriptedGateway(
+    happyPath({
+      [SKELETON]: [
+        write("src/other.ts", "export {};\n"),
+        (request: ModelRequest) => {
+          assert.match(String(observation(request).rejected), /src\/other\.ts/);
+          return write(SOURCE, IMPLEMENTED);
+        },
+        done({ summary: "Declared." }),
+        (request: ModelRequest) => {
+          assert.match(request.messages.at(-1)!.text, /must have no implementation/);
+          return write(SOURCE, STUB);
+        },
+        done({ summary: "Declared." }),
+      ],
+    }),
+  );
+  const harness = await CodingHarness.create(t, gateway, withTests());
+  const waiting = await harness.send("Add token validation");
+  assert.equal(waiting.wait?.kind, "skeleton-review", waiting.message);
+  assert.ok(!(waiting.wait!.payload.files as string[]).includes("src/other.ts"));
+});
+
+test("implementation stays inside its method and keeps the signature", async (t) => {
+  const changed = IMPLEMENTED.replace("token: string", "token: string, strict: boolean");
+  const gateway = new ScriptedGateway(
+    happyPath({
+      [IMPLEMENT]: [
+        write(SOURCE, changed),
+        done({ summary: "Implemented." }),
+        (request: ModelRequest) => {
+          assert.match(request.messages.at(-1)!.text, /signatures and all other code are fixed/);
+          return write(SOURCE, IMPLEMENTED);
+        },
+        done({ summary: "Implemented." }),
+      ],
+    }),
+  );
+  const harness = await CodingHarness.create(t, gateway, withTests());
+  const finished = await harness.approve(await harness.send("Add token validation"));
+  assert.equal(finished.presentation, "changes", finished.message);
+});
+
+test("a blocked assignment gets its answer and continues without repeating finished work", async (t) => {
+  const twoChanges = {
+    ...plan,
+    changes: [
+      { id: "m1", description: "First change", file: "src/first.ts", symbols: [] },
+      { id: "m2", description: "Second change", file: SOURCE, symbols: ["validateToken"] },
+    ],
+  };
+  const gateway = new ScriptedGateway(
+    happyPath({
+      // The skeleton changed the first finding's source, so that question is checked again.
+      [DISCOVER]: [
+        done({ paths: [SOURCE] }),
+        done({ paths: [SOURCE] }),
+        done({ paths: ["src/rules.ts"] }),
+      ],
+      [READ]: [
+        done(reading),
+        done(reading),
+        done({
+          answered: true,
+          answer: "Tokens expire after use.",
+          sources: ["src/rules.ts"],
+          missing: "",
+        }),
+      ],
+      [CHECK]: [done({ verdict: "ready", question: "" }), done({ verdict: "ready", question: "" })],
+      [PLAN]: [done(twoChanges)],
+      [IMPLEMENT]: [
+        write("src/first.ts", "export const first = 1;\n"),
+        done({ summary: "First." }),
+        final({
+          status: "needs-information",
+          question: "Must reset tokens become invalid after use?",
+          why: "It decides the check.",
+          checked: [SOURCE],
+          route: "repository",
+        }),
+        (request: ModelRequest) => {
+          assert.match(request.messages[0]!.text, /Tokens expire after use/);
+          assert.doesNotMatch(request.messages[0]!.text, /First change/);
+          return write(SOURCE, IMPLEMENTED);
+        },
+        done({ summary: "Second." }),
+      ],
+    }),
+  );
+  const harness = await CodingHarness.create(t, gateway, withTests(), defaultDecisions, {
+    "src/token.ts": "export const version = 1;\n",
+    "src/rules.ts": "export const single = true;\n",
+  });
+  const finished = await harness.approve(await harness.send("Add token validation"));
+  assert.equal(finished.presentation, "changes", finished.message);
+  assert.equal(gateway.sessions(PLAN), 1, "The plan held, so it was not rewritten.");
+  assert.ok(harness.decisions.asked.includes("plan-impact"));
+  assert.deepEqual(gateway.remaining(), []);
+});
+
+test("a search that finds nothing new stops with the unresolved question", async (t) => {
+  const gateway = new ScriptedGateway(
+    happyPath({
+      [DISCOVER]: [done({ paths: [SOURCE] }), done({ paths: [SOURCE] })],
+      [READ]: [done({ answered: false, answer: "", sources: [], missing: "Not here." })],
+      [CHECK]: [],
+      [PLAN]: [],
+      [TESTS]: [],
+      [SKELETON]: [],
+      [IMPLEMENT]: [],
+    }),
+  );
+  const harness = await CodingHarness.create(t, gateway);
+  const value = await harness.send("Add token validation");
+  assert.equal(value.presentation, "message");
+  assert.match(value.message, /no new evidence/);
+  assert.match(value.message, /Where are tokens/);
+  const state = await harness.state(value.runId);
+  assert.equal(state.data.questions[0]?.status, "open");
+});
+
+test("failed tests return to repair, then guards and tests run again", async (t) => {
+  const gateway = new ScriptedGateway(
+    happyPath({
+      [IMPLEMENT]: [
+        write(SOURCE, STUB.replace('throw new Error("Not implemented");', "return false;")),
+        done({ summary: "Wrong." }),
+      ],
+      [REPAIR]: [
+        (request: ModelRequest) => {
+          assert.match(request.messages[0]!.text, /Unit failed/);
+          return write(SOURCE, IMPLEMENTED);
+        },
+        done({ summary: "Fixed." }),
+      ],
+    }),
+  );
+  const harness = await CodingHarness.create(t, gateway, withTests());
+  const finished = await harness.approve(await harness.send("Add token validation"));
+  assert.equal(finished.presentation, "changes", finished.message);
+  assert.deepEqual(gateway.remaining(), []);
+});
+
+test("exhausted repairs stop as unresolved instead of completing", async (t) => {
+  let attempt = 0;
+  const failing = () => write(SOURCE, IMPLEMENTED.replace("0", String(++attempt)));
+  const gateway = new ScriptedGateway(
+    happyPath({
+      [REPAIR]: [failing, done({ summary: "Tried." })],
+    }),
+  );
+  const harness = await CodingHarness.create(t, gateway, {
+    settings: {
+      testTypes: ["unit"],
+      testSuites: [suite("echo attempt $(date +%N); exit 1")],
+      limits: { ...defaultCodingSettings.limits, codeFixReturns: 1 },
+    },
+  });
+  const value = await harness.approve(await harness.send("Add token validation"));
+  assert.equal(value.presentation, "message");
+  assert.match(value.message, /code-fix return limit \(1\)/);
+  assert.equal(value.result, null);
+  const kept = await harness.kept(value.runId, SOURCE);
+  assert.match(kept, /token\.length/, "Failed work stays in the run's copy for inspection.");
+});
+
+test("a missing test executable is blocked verification, not a code defect", async (t) => {
+  const gateway = new ScriptedGateway(happyPath());
+  const harness = await CodingHarness.create(t, gateway, {
+    settings: {
+      testTypes: ["unit"],
+      testSuites: [{ ...suite(""), command: "not-installed", args: [] }],
+    },
+  });
+  const value = await harness.approve(await harness.send("Add token validation"));
+  assert.equal(value.presentation, "message");
+  assert.match(value.message, /Verification is blocked|could not run|execvp/);
+  assert.equal(gateway.sessions(REPAIR), 0);
+});
+
+test("skills are scheduled in order and a package needs the user's approval", async (t) => {
+  const skill = (id: string, extra: Partial<SkillDefinition> = {}): SkillDefinition => ({
+    id,
+    versionId: `${id}-v1`,
+    name: id,
+    purpose: `The ${id} skill.`,
+    instructions: `SKILL-${id} instructions.`,
+    phases: ["planning"],
+    dependencies: [],
+    expectedResult: "A short result.",
+    selection: "required",
+    ...extra,
+  });
+  const withPackage = { ...plan, packages: ["left-pad"] };
+  const harness0 = happyPath({
+    [PLAN]: [done(withPackage)],
+    [IMPLEMENT]: [
+      write("package.json", '{"dependencies":{"other":"1.0.0"}}\n'),
+      done({ summary: "Added." }),
+      (request: ModelRequest) => {
+        assert.match(request.messages.at(-1)!.text, /adding other needs the user's approval/);
+        return write(SOURCE, IMPLEMENTED);
+      },
+      done({ summary: "Done." }),
+    ],
+    "SKILL-packages": [
+      final({
+        status: "needs-decision",
+        question: "Which package?",
+        findings: "left-pad fits.",
+        recommendation: "left-pad",
+        choices: [{ label: "left-pad", packages: ["left-pad"] }],
+      }),
+      (request: ModelRequest) => {
+        assert.match(request.messages[0]!.text, /Which package/);
+        return done({ summary: "Chose left-pad.", result: "left-pad" });
+      },
+    ],
+    "SKILL-design": [done({ summary: "Designed.", result: "design" })],
+  });
+  const gateway = new ScriptedGateway(harness0);
+  const files = { "src/token.ts": "export const version = 1;\n", "package.json": "{}\n" };
+  const harness = await CodingHarness.create(
+    t,
+    gateway,
+    {
+      ...withTests(),
+      skills: [skill("packages"), skill("design", { dependencies: ["packages"] })],
+    },
+    defaultDecisions,
+    files,
+  );
+  const decision = await harness.send("Add token validation");
+  assert.equal(decision.wait?.kind, "decision", decision.message);
+  // Implementation changes package.json only if the plan says so; the check runs on any edit.
+  const reviewed = await harness.answer(decision, { choice: "left-pad", packages: ["left-pad"] });
+  assert.equal(reviewed.wait?.kind, "skeleton-review", reviewed.message);
+});
+
+test("a resumed run keeps its pinned settings and counters", async (t) => {
+  const gateway = new ScriptedGateway(happyPath());
+  const harness = await CodingHarness.create(t, gateway, withTests());
+  const waiting = await harness.send("Add token validation");
+  const before = await harness.state(waiting.runId);
+  const assignments = Object.keys(before.data.assignments).length;
+  assert.ok(assignments >= 4);
+  const finished = await harness.approve(waiting);
+  assert.equal(finished.presentation, "changes", finished.message);
+  assert.equal(gateway.sessions(PLAN), 1, "Work before the wait is not repeated.");
+  await assert.rejects(harness.state(waiting.runId), "A completed run clears its directory.");
+});
+
+const scheduledSkill = (id: string, extra: Partial<SkillDefinition> = {}): SkillDefinition => ({
+  id,
+  versionId: `${id}-v1`,
+  name: id,
+  purpose: `The ${id} skill.`,
+  instructions: `SKILL-${id} instructions.`,
+  phases: ["planning"],
+  dependencies: [],
+  expectedResult: "A short result.",
+  selection: "required",
+  ...extra,
+});
+const skillDone = done({ summary: "Done.", result: "result" });
+const SCHEDULER = "You choose which skill runs next";
+
+test("a skill or guard runs on its own model", async (t) => {
+  const gateway = new ScriptedGateway(
+    happyPath({
+      "SKILL-own": [skillDone],
+      "Review only the supplied changes": [{ verdict: "pass", findings: [] }],
+    }),
+  );
+  const guard: GuardDefinition = {
+    id: "review",
+    versionId: "v1",
+    name: "Review",
+    purpose: "Reviews.",
+    type: "llm",
+    phases: ["guards"],
+    selection: "required",
+    blocking: true,
+    reviewInstructions: "Check it.",
+    model: "guard-model",
+    check: null,
+  };
+  const harness = await CodingHarness.create(t, gateway, {
+    ...withTests(),
+    guards: [guard],
+    skills: [scheduledSkill("own", { model: "skill-model" })],
+  });
+  const finished = await harness.approve(await harness.send("Add token validation"));
+  assert.equal(finished.presentation, "changes", finished.message);
+  assert.ok(harness.bound.includes("guardReview:guard-model"));
+  assert.ok(harness.bound.includes("default:skill-model"));
+});
+
+test("a skill runs once in each of its phases", async (t) => {
+  const gateway = new ScriptedGateway(happyPath({ "SKILL-both": [skillDone, skillDone] }));
+  const harness = await CodingHarness.create(t, gateway, {
+    ...withTests(),
+    skills: [scheduledSkill("both", { phases: ["planning", "skeleton"] })],
+  });
+  const waiting = await harness.send("Add token validation");
+  assert.equal(waiting.wait?.kind, "skeleton-review", waiting.message);
+  assert.equal(gateway.sessions("SKILL-both"), 2);
+});
+
+test("after a wait the run continues the saved choice without asking the scheduler", async (t) => {
+  const gateway = new ScriptedGateway(
+    happyPath({
+      // One reply only: asking again after the wait would be an unexpected model call.
+      [SCHEDULER]: [{ next: "second", reason: "It comes first here." }],
+      "SKILL-second": [
+        final({
+          status: "needs-decision",
+          question: "Which one?",
+          findings: "Two fit.",
+          recommendation: "A",
+          choices: [{ label: "A", packages: [] }],
+        }),
+        skillDone,
+      ],
+      "SKILL-first": [skillDone],
+    }),
+  );
+  const harness = await CodingHarness.create(t, gateway, {
+    ...withTests(),
+    skills: [scheduledSkill("first"), scheduledSkill("second")],
+  });
+  const decision = await harness.send("Add token validation");
+  assert.equal(decision.wait?.kind, "decision", decision.message);
+  const reviewed = await harness.answer(decision, { choice: "A" });
+  assert.equal(reviewed.wait?.kind, "skeleton-review", reviewed.message);
+  assert.equal(gateway.sessions(SCHEDULER), 1);
+  assert.deepEqual(gateway.failures, []);
+});
+
+test("a skill must produce its expected result", async (t) => {
+  const gateway = new ScriptedGateway(
+    happyPath({ "SKILL-real": [done({ summary: "Nothing.", result: "" }), skillDone] }),
+  );
+  const harness = await CodingHarness.create(t, gateway, {
+    ...withTests(),
+    skills: [scheduledSkill("real")],
+  });
+  const waiting = await harness.send("Add token validation");
+  assert.equal(waiting.wait?.kind, "skeleton-review", waiting.message);
+  assert.ok(!gateway.remaining().includes("SKILL-real"));
+  assert.match(gateway.requests.at(-1) ? JSON.stringify(gateway.requests) : "", /result is empty/);
+});
+
+test("a required skill without its inputs is reported, not run", async (t) => {
+  const gateway = new ScriptedGateway(happyPath());
+  const harness = await CodingHarness.create(t, gateway, {
+    ...withTests(),
+    skills: [scheduledSkill("late", { requiredInputs: ["skeleton"] })],
+  });
+  const value = await harness.send("Add token validation");
+  assert.equal(value.presentation, "message");
+  assert.match(value.message, /late needs skeleton/);
+});
+
+test("a selected test type with no suite blocks verification before tests are written", async (t) => {
+  const gateway = new ScriptedGateway(happyPath());
+  const harness = await CodingHarness.create(t, gateway, { settings: { testTypes: ["unit"] } });
+  const value = await harness.send("Add token validation");
+  assert.equal(value.presentation, "message");
+  assert.match(value.message, /Verification is blocked: no enabled suite runs unit/);
+  assert.equal(gateway.sessions(TESTS), 0);
+});
+
+test("a skeleton guard's findings revise the skeleton before review", async (t) => {
+  const revised = STUB.replace("boolean", "boolean | null");
+  const gateway = new ScriptedGateway(
+    happyPath({
+      [SKELETON]: [
+        write(SOURCE, STUB),
+        done({ summary: "First." }),
+        (request: ModelRequest) => {
+          assert.match(request.messages[0]!.text, /Skeleton rule/);
+          return write(SOURCE, revised);
+        },
+        done({ summary: "Second." }),
+      ],
+    }),
+  );
+  const guard: GuardDefinition = {
+    id: "shape",
+    versionId: "v1",
+    name: "Skeleton rule",
+    purpose: "Checks the shape.",
+    type: "deterministic",
+    phases: ["skeleton"],
+    selection: "required",
+    blocking: true,
+    reviewInstructions: "",
+    model: "",
+    check: {
+      command: "/bin/sh",
+      args: ["-c", "grep -q 'boolean | null' src/token.ts"],
+      script: "",
+      workingDirectory: ".",
+      timeoutMs: 10_000,
+      successExitCodes: [0],
+    },
+  };
+  const harness = await CodingHarness.create(t, gateway, { ...withTests(), guards: [guard] });
+  const waiting = await harness.send("Add token validation");
+  assert.equal(waiting.wait?.kind, "skeleton-review", waiting.message);
+  assert.equal(gateway.sessions(SKELETON), 2);
+});
+
+test("answer skills run when the question needed investigation, and not otherwise", async (t) => {
+  const skills = [scheduledSkill("trace", { phases: ["answer"] })];
+  const investigated = new ScriptedGateway({
+    [PREPARE]: [done({ questions: [{ question: "What is version?", why: "Asked." }] })],
+    [DISCOVER]: [done({ paths: [SOURCE] })],
+    [READ]: [cli(`cat ${SOURCE}`), done(reading)],
+    "SKILL-trace": [skillDone],
+    [ANSWER]: [done({ answer: "Answered." })],
+  });
+  const first = await CodingHarness.create(t, investigated, { skills });
+  assert.equal((await first.send("What is it?", { mode: "answer-only" })).message, "Answered.");
+  assert.equal(investigated.sessions("SKILL-trace"), 1);
+
+  const simple = new ScriptedGateway({
+    [PREPARE]: [done({ questions: [] })],
+    [ANSWER]: [done({ answer: "Hello." })],
+  });
+  const second = await CodingHarness.create(t, simple, { skills });
+  assert.equal((await second.send("Hi?", { mode: "answer-only" })).message, "Hello.");
+  assert.equal(simple.sessions("SKILL-trace"), 0);
 });

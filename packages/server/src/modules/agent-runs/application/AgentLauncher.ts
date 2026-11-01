@@ -19,6 +19,11 @@ export type AgentLaunch = Readonly<{
   message: string;
   configuration?: import("@kushex/contracts").AgentConfiguration;
   files: readonly string[];
+  /** Project data for the agent, loaded here because its process has no database access. */
+  host?: unknown;
+  resume?: unknown;
+  /** Private, in-memory provider credentials; never persisted with run state. */
+  credentials?: Readonly<Record<string, string>>;
   breakpoints: DebugBreakpointsDto;
   /** Stores a kushibot debug event the agent reported; it is validated, not trusted. */
   recordDebugEvent(event: unknown): void;

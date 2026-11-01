@@ -38,6 +38,9 @@ services:
 
   backend:
     build: *backend-build
+    env_file:
+      - path: ../.env.credentials
+        required: false
     init: true
     # Docker's default syscall policy plus Bubblewrap's namespace/mount syscalls.
     security_opt:
@@ -50,6 +53,8 @@ services:
       KUSHEX_PLUGINS_DIR: /plugins
       KUSHEX_KUSHIBOT_DIR: /app/node_modules/kushibot
       KUSHEX_ARTIFACTS_DIR: /var/lib/kushex/artifacts
+      # Working copies and state of coding runs; a run waiting for a human lives here.
+      KUSHEX_RUNS_DIR: /var/lib/kushex/runs
       KUSHEX_EXCLUDED_DIRECTORIES: ${KUSHEX_EXCLUDED_DIRECTORIES-dist,build,coverage,.next,.nuxt,.output,.cache,.turbo,.vite}
       KUSHEX_ALLOWED_ORIGINS: http://localhost:3050,http://127.0.0.1:3050
       # Agents run from the chat read model credentials from the backend's environment.
@@ -58,6 +63,10 @@ services:
       # The coding agent uses saved Codex CLI authentication, not an API key.
       CODEX_HOME: /codex
       CODEX_MODEL: ${CODEX_MODEL:-gpt-6.1-sol}
+      # JEV classifies requests and selects files. Set the key in kushex/.env and start
+      # Compose with --env-file .env, or export it.
+      KUSHEX_JEV_API_KEY: ${KUSHEX_JEV_API_KEY:-}
+      KUSHEX_JEV_MODEL: ${KUSHEX_JEV_MODEL:-jev-latest}
     volumes:
       # Writable directory: Codex refreshes auth.json atomically during use.
       - type: bind

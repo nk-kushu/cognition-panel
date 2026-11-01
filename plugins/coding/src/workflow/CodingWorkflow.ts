@@ -1,143 +1,141 @@
 import {
-  DefaultAgentAssignmentPolicy,
-  EditingResultContract,
   ExecutorRegistration,
   ExecutorRegistry,
   JsonValueContract,
   StepPolicyRegistry,
-  StructuredTaskExecutor,
-  TaskInputContract,
-  WorkspaceEditingExecutor,
-  type EditingResult,
-  type IAgentTaskFactory,
+  WorkflowPolicyRegistry,
   type IClock,
-  type TaskInput,
+  type IResultContract,
+  type JsonValue,
+  type RegistrationRef,
   type WorkflowDefinition,
+  type WorkflowTransitionDefinition,
 } from "kushibot";
-import { CodingInputPolicy } from "./policies/CodingInputPolicy";
-import { planningInstructions } from "../steps/planning/instructions";
-import { editingInstructions } from "../steps/editing/instructions";
+import type { RunContext } from "../context/RunContext";
+import type { CodingLimits } from "../engineering/types";
+import type { ICodingStep } from "./CodingStep";
+import { CodingStepExecutor, type StepResult } from "./CodingStepExecutor";
+import { ReturnAllowance, type ReturnCategory } from "./policies/ReturnAllowance";
+import { ReturnRoutePolicy, WaitAnsweredPolicy } from "./policies/RoutePolicies";
+import {
+  RETURN_ROUTES,
+  WORKFLOW_STEPS,
+  type ReturnRoute,
+  type WorkflowStep,
+} from "./WorkflowGraph";
 
-/** Owns the plan-before-edit dependency and the policies that pass its accepted result. */
+/** Waits per run; a safety bound, since each reopens a step and uses an engine attempt. */
+export const MAX_WAITS = 12;
+
+const anything: IResultContract<JsonValue> = {
+  id: "coding-step-json",
+  version: "1",
+  validate: async (value) => ({ valid: true, value: value as JsonValue }),
+};
+
+/**
+ * The state machine. Steps form one chain, because a return may only target an ancestor and
+ * completion requires every step: branch selection therefore leaves the other branch's steps
+ * finishing without work. Returns invalidate later steps, and those reuse results that are
+ * still valid, so a return repeats only what it affects.
+ */
 export class CodingWorkflow {
   constructor(
-    private readonly planner: IAgentTaskFactory<TaskInput>,
-    private readonly editor: IAgentTaskFactory<EditingResult>,
+    private readonly steps: readonly ICodingStep[],
+    private readonly run: RunContext,
+    private readonly limits: CodingLimits,
     private readonly clock: IClock,
   ) {}
 
   create() {
     const json = new JsonValueContract();
-    const tasks = new TaskInputContract(json);
-    const edits = new EditingResultContract(json);
     const executors = new ExecutorRegistry();
-    
-    executors.register(
-      new ExecutorRegistration({
-        id: "coding-plan",
-        version: "1",
-        input: tasks,
-        result: tasks,
-        executor: new StructuredTaskExecutor({
-          input: tasks,
-          result: tasks,
-          policy: new DefaultAgentAssignmentPolicy(planningInstructions),
-          factory: this.planner,
-          json,
-          clock: this.clock,
-        }),
-        json,
-        clock: this.clock,
-      }),
-    );
-
-    executors.register(
-      new ExecutorRegistration({
-        id: "coding-edit",
-        version: "1",
-        input: tasks,
-        result: edits,
-        executor: new WorkspaceEditingExecutor(
-          tasks,
-          edits,
-          new DefaultAgentAssignmentPolicy(editingInstructions),
-          this.editor,
-          json,
-          this.clock,
-        ),
-        json,
-        clock: this.clock,
-      }),
-    );
-
     const policies = new StepPolicyRegistry();
-    
-    policies.registerInput(
-      { id: "coding-plan-input", version: "1" },
-      new CodingInputPolicy(false, tasks, json),
-    );
-
-    policies.registerInput(
-      { id: "coding-edit-input", version: "1" },
-      new CodingInputPolicy(true, tasks, json),
-    );
-
-    policies.registerAcceptance(
-      { id: "coding-plan-accept", version: "1" },
-      {
-        async apply({ candidate }) {
-          const result = await tasks.validate(candidate);
-          return result.valid
-            ? { status: "accepted" }
-            : {
-                status: "rejected",
-                code: "INVALID_PLAN",
-                message: "A valid implementation plan is required.",
-              };
-        },
+    const inputPolicy = { id: "coding-input", version: "1" };
+    const acceptancePolicy = { id: "coding-accept", version: "1" };
+    policies.registerInput(inputPolicy, {
+      apply: async ({ stepId }) => ({ stepId }),
+    });
+    policies.registerAcceptance(acceptancePolicy, {
+      apply: async ({ candidate }) => {
+        const result = candidate as unknown as StepResult;
+        return result.kind === "done"
+          ? { status: "accepted" }
+          : { status: "rejected", code: "RETURN_REQUESTED", message: result.reason };
       },
-    );
+    });
 
-    policies.registerAcceptance(
-      { id: "coding-edit-accept", version: "1" },
-      {
-        async apply({ candidate }) {
-          const result = await edits.validate(candidate);
-          return result.valid && result.value.unresolved.length === 0
-            ? { status: "accepted" }
-            : {
-                status: "rejected",
-                code: "INCOMPLETE_IMPLEMENTATION",
-                message: "Implementation is invalid or has unresolved work.",
-              };
-        },
-      },
-    );
-    
+    const attempts = 1 + this.limits.totalReturns + MAX_WAITS;
+    const definitionSteps = this.steps.map((step, index) => {
+      const registration = new ExecutorRegistration({
+        id: `coding-${step.id}`,
+        version: "2",
+        input: anything,
+        result: anything,
+        executor: new CodingStepExecutor(step, this.run),
+        json,
+        clock: this.clock,
+      });
+      executors.register(registration);
+      return {
+        id: step.id,
+        dependencies: index === 0 ? [] : [this.steps[index - 1]!.id],
+        executor: registration.metadata,
+        inputPolicy,
+        acceptancePolicy,
+        maxAttempts: Math.min(64, attempts),
+      };
+    });
+
+    const { transitions, categories } = this.transitions();
+    const workflowPolicies = new WorkflowPolicyRegistry();
+    const allowance = new ReturnAllowance(this.limits, categories);
+    const route = (name: ReturnRoute): RegistrationRef => ({ id: `route-${name}`, version: "1" });
+    for (const name of Object.keys(RETURN_ROUTES) as ReturnRoute[])
+      workflowPolicies.registerTransition(
+        route(name),
+        new ReturnRoutePolicy(name, allowance, this.run.state),
+      );
+    workflowPolicies.registerTransition(WAIT, new WaitAnsweredPolicy());
+
     const definition: WorkflowDefinition = {
       id: "coding",
-      version: "1",
-      maxTotalAttempts: 4,
-      transitions: [],
-      steps: [
-        {
-          id: "plan",
-          dependencies: [],
-          executor: executors.resolve("coding-plan", "1").metadata,
-          inputPolicy: { id: "coding-plan-input", version: "1" },
-          acceptancePolicy: { id: "coding-plan-accept", version: "1" },
-          maxAttempts: 2,
-        },
-        {
-          id: "edit",
-          dependencies: ["plan"],
-          executor: executors.resolve("coding-edit", "1").metadata,
-          inputPolicy: { id: "coding-edit-input", version: "1" },
-          acceptancePolicy: { id: "coding-edit-accept", version: "1" },
-          maxAttempts: 2,
-        },
-      ],
+      version: "3",
+      maxTotalAttempts: Math.min(
+        1024,
+        this.steps.length * (2 + this.limits.totalReturns) + 2 * MAX_WAITS,
+      ),
+      transitions,
+      steps: definitionSteps,
     };
-    return { definition, executors, policies };
+    return { definition, executors, policies, workflowPolicies, allowance };
+  }
+
+  private transitions() {
+    const transitions: WorkflowTransitionDefinition[] = [];
+    const categories = new Map<string, ReturnCategory>();
+    const maxTraversals = 1 + this.limits.totalReturns + MAX_WAITS;
+    const steps: readonly WorkflowStep[] = WORKFLOW_STEPS;
+    for (const { id: stepId, pauses } of steps) {
+      if (!pauses) continue;
+      const id = `${stepId}-answered`;
+      transitions.push({ id, fromStepId: stepId, toStepId: stepId, policy: WAIT, maxTraversals });
+      if (stepId === "mode") categories.set(id, "clarification");
+    }
+    for (const { id: fromStepId, returns } of steps)
+      for (const route of returns) {
+        const id = `${fromStepId}-to-${route}`;
+        transitions.push({
+          id,
+          fromStepId,
+          toStepId: RETURN_ROUTES[route].target,
+          policy: { id: `route-${route}`, version: "1" },
+          maxTraversals,
+        });
+        categories.set(id, route);
+      }
+    return { transitions, categories };
   }
 }
+
+const WAIT: RegistrationRef = { id: "wait-answered", version: "1" };

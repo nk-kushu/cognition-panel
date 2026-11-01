@@ -1,5 +1,5 @@
 /*
- * Kushex panel styles. Layer order: Tailwind reset < antd < Tailwind utilities.
+ * Cognition Panel panel styles. Layer order: Tailwind reset < antd < Tailwind utilities.
  * Preflight is NOT included here (it would leak into a React host page); hosts that
  * own the whole page or a shadow root add ./preflight.css.
  */

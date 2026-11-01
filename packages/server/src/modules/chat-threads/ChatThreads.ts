@@ -49,6 +49,29 @@ export class ChatThreads {
     return thread;
   }
 
+  /** The thread's latest exchanges, oldest first, as context for classifying a new message. */
+  async conversation(context: RequestContext, projectId: string, threadId: string) {
+    const turns = await this.db.chatTurn.findMany({
+      where: { threadId, thread: { actorId: context.actor.id, projectId } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 3,
+      select: { message: true, events: true },
+    });
+    return turns.reverse().flatMap((turn) => {
+      const events = Array.isArray(turn.events) ? turn.events : [];
+      const result = events.findLast(
+        (event) => (event as { type?: unknown } | null)?.type === "result",
+      ) as { value?: { message?: unknown } } | undefined;
+      const reply = result?.value?.message;
+      return [
+        { role: "user" as const, text: turn.message.slice(0, 1000) },
+        ...(typeof reply === "string"
+          ? [{ role: "agent" as const, text: reply.slice(0, 1000) }]
+          : []),
+      ];
+    });
+  }
+
   /** Reads only completed coding evidence from a turn owned by this actor and project. */
   async codingResult(context: RequestContext, projectId: string, runId: string) {
     await this.saves.get(runId);

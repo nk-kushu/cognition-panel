@@ -15,3 +15,6 @@ pnpm-workspace.local.yaml
 
 # Machine-specific workspace mounts
 /docker/compose.local.yml
+
+# Local credential encryption key
+.env.credentials

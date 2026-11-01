@@ -1,6 +1,6 @@
-# Kushex docs
+# Cognition Panel docs
 
-Kushex is the harness panel for [kushibot](../../kushibot): a web UI to inspect and
+Cognition Panel is the harness panel for [kushibot](../../kushibot): a web UI to inspect and
 operate workflow runs, step attempts, agentic sessions, artifacts, usage budgets,
 debug traces and publication approvals.
 

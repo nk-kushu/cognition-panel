@@ -29,7 +29,11 @@ type Limits = Readonly<{
 const INSPECTOR_NOTICE =
   /^(Debugger listening on |Debugger ending on |For help, see: |Debugger attached\.|Waiting for the debugger to disconnect)/;
 /** Server-only settings that agents have no use for. */
-const PRIVATE_ENVIRONMENT = new Set(["DATABASE_URL", "POSTGRES_PASSWORD"]);
+const PRIVATE_ENVIRONMENT = new Set([
+  "DATABASE_URL",
+  "POSTGRES_PASSWORD",
+  "KUSHEX_CREDENTIAL_ENCRYPTION_KEY",
+]);
 
 /**
  * Runs each agent message in its own Node process with tsx as the TypeScript loader, so a
@@ -49,7 +53,8 @@ export class ChildProcessAgentLauncher implements AgentLauncher {
     limits: Partial<Limits> = {},
   ) {
     this.limits = {
-      runTimeoutMs: 15 * 60_000,
+      // An agent's own limits apply first; the coding agent's are set per project.
+      runTimeoutMs: 4 * 60 * 60_000,
       debugRunTimeoutMs: 2 * 60 * 60_000,
       cancelGraceMs: 5000,
       inspectorTimeoutMs: 10_000,
@@ -107,6 +112,9 @@ export class ChildProcessAgentLauncher implements AgentLauncher {
         message: launch.message,
         files: launch.files,
         configuration: launch.configuration ?? {},
+        ...(launch.credentials ? { credentials: launch.credentials } : {}),
+        ...(launch.host === undefined ? {} : { host: launch.host }),
+        ...(launch.resume === undefined ? {} : { resume: launch.resume }),
       };
       child.send(command);
       run.emit({ type: "status", status: "running" });

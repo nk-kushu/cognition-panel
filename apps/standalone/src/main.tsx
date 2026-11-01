@@ -1,4 +1,5 @@
 import "@kushex/ui/preflight.css";
+import "@kushex/ui/style.css";
 import { KushexPanel, type AgentUiPlugin } from "@kushex/ui";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

@@ -1,260 +1,188 @@
 import {
-  EditingResultContract,
-  JsonValueContract,
-  SessionAgentTaskFactory,
-  TaskInputContract,
-  WorkflowPolicyRegistry,
-  type AgentRunRuntime,
-  type AgentTaskBindingRequest,
-  type IAgentSessionBinding,
-  type IAgentSetupInput,
-  type IArtifactWriter,
-  type IAgentTaskFactory,
-  type IAgentWorkflow,
   type EditingResult,
-  type IModelGateway,
+  type IAgentSetupInput,
+  type IAgentWorkflow,
+  type IArtifactWriter,
   type IPolicy,
   type IResultContract,
-  type ModelProfile,
-  type TaskInput,
+  type JsonValue,
 } from "kushibot";
-import type { CodingAgentOptions, CodingCheck } from "../CodingAgentOptions";
-import { CompressingCodingSessions } from "../context/CompressingCodingSessions";
+import { stat } from "node:fs/promises";
+import path from "node:path";
+import type { CodingAgentOptions } from "../CodingAgentOptions";
+import { AssignmentRunner } from "../assignments/AssignmentRunner";
+import { RunArtifacts } from "../context/RunArtifacts";
+import { RunContext } from "../context/RunContext";
+import type { RunState } from "../context/RunState";
+import { SkillPhaseRunner } from "../engineering/SkillPhaseRunner";
+import { WorkingCopy } from "../infrastructure/workspace/WorkingCopy";
+import {
+  AnswerInvestigateStep,
+  AnswerPrepareStep,
+  AnswerWriteStep,
+} from "../steps/answer/AnswerSteps";
+import { ImplementStep } from "../steps/editing/ImplementStep";
+import { FailureRouter } from "../steps/guards/FailureRouter";
+import { GuardPass } from "../steps/guards/GuardPass";
+import { RunGuardsStep } from "../steps/guards/RunGuardsStep";
+import { InvestigateStep } from "../steps/investigation/InvestigateStep";
+import { Investigator } from "../steps/investigation/Investigator";
+import { PlanInvestigationStep } from "../steps/investigation/PlanInvestigationStep";
+import { QuestionPlanner } from "../steps/investigation/QuestionPlanner";
+import { ChooseModeStep } from "../steps/mode/ChooseModeStep";
+import { PlanImplementationStep } from "../steps/planning/PlanImplementationStep";
+import { HumanReviewStep } from "../steps/review/HumanReviewStep";
+import { CreateSkeletonStep } from "../steps/skeleton/CreateSkeletonStep";
+import { WriteTestsStep } from "../steps/tests/WriteTestsStep";
+import { RunTestsStep, requiredSuites } from "../steps/verification/RunTestsStep";
+import type { ICodingStep } from "./CodingStep";
 import { CodingWorkflow } from "./CodingWorkflow";
-import { EditingSessionPolicy } from "../steps/editing/EditingSessionPolicy";
-import { PlanningSessionPolicy } from "../steps/planning/PlanningSessionPolicy";
-import { CodingEngineeringConfiguration } from "../engineering/CodingEngineeringConfiguration";
-import { CodingEngineeringModel } from "../engineering/CodingEngineeringModel";
-import { CodingEngineeringSelection } from "../engineering/CodingEngineeringSelection";
-import { CodingReviewArtifacts } from "../engineering/CodingReviewArtifacts";
-import { CodingGuardReview } from "../engineering/CodingGuardReview";
-import { WorkspaceTools } from "../tools/WorkspaceTools";
+import type { ReturnAllowance } from "./policies/ReturnAllowance";
+import { WORKFLOW_STEPS, type WorkflowStepId } from "./WorkflowGraph";
 
-/**
- * **This class prepares everything the agent needs to do a coding task.**
- *
- * Imagine you ask: “Fix the login button.”
- *
- * `CodingRunWorkflow` sets up:
- *
- * 1. **Tools** — which files the agent can read and edit.
- * 2. **Steps** — first make a plan, then edit the code.
- * 3. **Checks** — verify that the reported changes match the actual files and that configured checks passed.
- * 4. **Result** — choose what to return when the work finishes.
- *
- * **Why does it exist?** The underlying `Agent` is general-purpose. This class supplies the setup that makes it behave like a **coding agent**.
- *
- * `apply()` means: **“Prepare this particular task for execution.”**
- *
- * Think of it as preparing a kitchen: tools, recipe, and rules. The workflow engine then does the cooking.
- */
+export type CodingTask = Readonly<{ digest: string }>;
+
+export type CodingResult =
+  | Readonly<{ mode: "answer-only"; answer: string; unresolved: readonly string[] }>
+  | Readonly<{ mode: "code-change"; change: EditingResult; noTestsRegistered: boolean }>;
+
+const resultContract: IResultContract<CodingResult> = {
+  id: "coding-result",
+  version: "2",
+  validate: async (value) => ({ valid: true, value: value as CodingResult }),
+};
+
+/** Prepares one run: its working copy, services, steps and completion rules. */
 export class CodingRunWorkflow implements IPolicy<
-  IAgentSetupInput<TaskInput>,
-  IAgentWorkflow<EditingResult>
+  IAgentSetupInput<CodingTask>,
+  IAgentWorkflow<CodingResult>
 > {
-  private readonly checks: readonly CodingCheck[];
   constructor(
-    private readonly workspace: string,
-    private readonly artifacts: IArtifactWriter,
-    checks: readonly CodingCheck[] = [],
-    /**
-     * Only needed to build compressing sessions. `AgentRunRuntime` keeps its gateway and
-     * profile private, so the composition root threads them through rather than the runtime
-     * handing them over.
-     */
-    private readonly model: Readonly<{
-      gateway: IModelGateway;
-      profile: ModelProfile;
-      modelTimeoutMs: number;
-    }> | null = null,
-    private readonly compression: CodingAgentOptions["compression"] = undefined,
-    private readonly excludedDirectories?: readonly string[],
-    private readonly engineering?: CodingEngineeringConfiguration,
-  ) {
-    if (
-      checks.length > 16 ||
-      new Set(checks.map((check) => check.id)).size !== checks.length ||
-      checks.some((check) => !/^[A-Za-z0-9_.:-]{1,128}$/.test(check.id) || !check.command)
-    )
-      throw new Error("Invalid check registrations.");
-    this.checks = checks.map((check) =>
-      Object.freeze({ ...check, args: Object.freeze([...check.args]) }),
-    );
-  }
-  /**
-   * Prepares one coding run; called by Kushibot's Agent during `agent.run(task)`.
-   * - Receives the validated task and a fresh runtime (stores, budget, sessions).
-   * - Initializes workspace tools restricted to the task's permitted files.
-   * - Returns the plan → edit workflow, validation policies, and result mapping.
-   *
-   * The workflow engine executes the returned setup. `apply` is the IPolicy method.
-   */
-  async apply({
-    task,
-    runtime,
-  }: IAgentSetupInput<TaskInput>): Promise<IAgentWorkflow<EditingResult>> {
-    // An empty filePaths list enables workspace access; explicit paths restrict it.
-    // This local runner cannot fetch external references; reject them instead of
-    // silently ignoring context the caller expects the agent to use.
-    if (task.sourceRefs.length !== 0)
-      throw new Error(
-        "External source references are not supported by the local runner. Supply context through permitted files.",
-      );
+    private readonly options: CodingAgentOptions,
+    private readonly state: RunState,
+    private readonly writer: IArtifactWriter,
+  ) {}
 
-    // Create tools per run so file snapshots, edits, and check results cannot leak
-    // between tasks. Use the runtime's budget and clock to share its run limits.
-    const reviewArtifacts = new CodingReviewArtifacts(this.artifacts, runtime);
-    const tools = new WorkspaceTools(
-      this.workspace,
-      task.filePaths,
-      this.checks,
+  async apply({ runtime }: IAgentSetupInput<CodingTask>): Promise<IAgentWorkflow<CodingResult>> {
+    const { pinned, cli, models } = this.options;
+    const copy = await this.workingCopy();
+    const artifacts = new RunArtifacts(this.writer, runtime, pinned.message);
+    const context = new RunContext(
+      pinned,
+      this.state,
+      copy,
+      cli,
+      artifacts,
       runtime,
-      reviewArtifacts,
-      this.excludedDirectories,
-    );
-
-    // Capture the original files before planning: completion compares against
-    // this baseline to verify which files actually changed.
-    await tools.initialize();
-    let guidance = "";
-    let guardReview: CodingGuardReview | undefined;
-    if (this.engineering?.settings.enabled) {
-      if (!this.model) throw new Error("Engineering selection requires a model connection.");
-      const model = new CodingEngineeringModel(
-        runtime,
-        this.model.gateway,
-        this.model.profile,
-        this.model.modelTimeoutMs,
-      );
-      const selection = new CodingEngineeringSelection(
-        this.engineering.settings.definitions,
-        model.decisions,
-        runtime,
-        reviewArtifacts,
-        this.model.modelTimeoutMs,
-      );
-      guidance = await selection.skills(task.goal);
-      guardReview = new CodingGuardReview(
-        this.engineering,
-        selection,
-        model,
-        tools,
-        reviewArtifacts,
-        runtime,
-        task.goal,
-      );
-    }
-
-    // Planning returns a TaskInput-shaped plan; editing returns an EditingResult.
-    // Contracts validate these model outputs before the workflow can accept them.
-    const json = new JsonValueContract(),
-      taskContract = new TaskInputContract(json),
-      editingResultContract = new EditingResultContract(json);
-
-    // Bind both sessions to the same workspace evidence. Planning gets read-only
-    // tools; editing gets the accepted plan plus write/check tools. The workflow
-    // declares the plan → edit dependency; skill selection above is recorded separately.
-    //
-    // Each step gets its own session, so each gets its own context ledger: planning
-    // observations can never be compressed into the editing context.
-    const workflow = new CodingWorkflow(
-      this.taskFactory(runtime, taskContract, new PlanningSessionPolicy(runtime, tools, guidance)),
-      this.taskFactory(
-        runtime,
-        editingResultContract,
-        new EditingSessionPolicy(runtime, tools, guidance, guardReview),
+      models,
+      this.options.decisions(runtime),
+      this.writer,
+      requiredSuites(pinned.settings.testSuites, pinned.settings.testTypes).map(
+        (suite) => suite.id,
       ),
+    );
+    await context.initialize();
+
+    const assignments = new AssignmentRunner(context);
+    const skills = new SkillPhaseRunner(context, assignments);
+    const investigator = new Investigator(context, assignments);
+    const planner = new QuestionPlanner(context, assignments);
+    const router = new FailureRouter(context);
+    const guards = new GuardPass(context);
+    let allowance: ReturnAllowance | null = null;
+    const steps: Readonly<Record<WorkflowStepId, ICodingStep>> = {
+      mode: new ChooseModeStep(context, () => allowance!),
+      "answer-prepare": new AnswerPrepareStep(context, planner),
+      "answer-investigate": new AnswerInvestigateStep(context, investigator),
+      "answer-write": new AnswerWriteStep(context, assignments, skills),
+      "plan-investigation": new PlanInvestigationStep(context, planner),
+      investigate: new InvestigateStep(context, assignments, investigator),
+      "plan-implementation": new PlanImplementationStep(context, assignments, skills),
+      "write-tests": new WriteTestsStep(context, assignments, skills),
+      skeleton: new CreateSkeletonStep(context, assignments, skills, guards),
+      "human-review": new HumanReviewStep(context),
+      implement: new ImplementStep(context, assignments, skills),
+      guards: new RunGuardsStep(context, guards, router),
+      "run-tests": new RunTestsStep(context, router),
+    };
+    const workflow = new CodingWorkflow(
+      WORKFLOW_STEPS.map(({ id }) => steps[id]),
+      context,
+      pinned.settings.limits,
       runtime.clock,
     ).create();
+    allowance = workflow.allowance;
 
-    // The workflow refers to this policy by ID/version; the registry supplies
-    // the callback the engine invokes before declaring the whole run complete.
-    const completionPolicy = { id: "coding-complete", version: "1" };
-    const workflowPolicies = new WorkflowPolicyRegistry();
-
-    workflowPolicies.registerCompletion(completionPolicy, {
-      apply: async ({ run }) => {
-        // Recheck the accepted edit against current files and required checks.
-        // A valid result shape alone cannot prove the reported work was done.
-        const result = await editingResultContract.validate(
-          run.accepted.find((item) => item.stepId === "edit")?.result,
-        );
-
-        return result.valid &&
-          (await tools.accepts(result.value)) &&
-          (!guardReview || (await guardReview.approved(result.value)))
+    const completionPolicy = { id: "coding-complete", version: "2" };
+    workflow.workflowPolicies.registerCompletion(completionPolicy, {
+      apply: async () => {
+        const problem = await this.completionProblem(context);
+        return problem === null
           ? { accepted: true }
-          : {
-              accepted: false,
-              code: "CODING_EVIDENCE_MISMATCH",
-              message:
-                "Current files and required check results must match the accepted implementation.",
-            };
+          : { accepted: false, code: "CODING_EVIDENCE_MISMATCH", message: problem };
       },
     });
-
-    // Return configuration and callbacks to Agent; it registers the workflow,
-    // starts the engine, then maps the result and collects artifacts afterward.
     return {
-      ...workflow,
+      definition: workflow.definition,
+      executors: workflow.executors,
+      policies: workflow.policies,
+      workflowPolicies: workflow.workflowPolicies,
       completionPolicy,
-      workflowPolicies,
-      evidence: {
-        // Only plan dependencies are supported here, and editing must have one.
-        // This rejects an edit context that omits the prerequisite planning step.
-        apply: async ({ view }) =>
-          view.dependencies.every((dependency) => dependency.stepId === "plan") &&
-          (view.stepId !== "edit" ||
-            view.dependencies.some((dependency) => dependency.stepId === "plan")),
-      },
+      evidence: { apply: async () => true },
       resultPolicy: {
-        // The engine returns results for all steps. Expose only the accepted edit
-        // as the caller's EditingResult, failing if it is missing or malformed.
-        apply: async (result) => {
-          const checked = await editingResultContract.validate(
-            result.results.find((item) => item.stepId === "edit")?.result,
-          );
-          if (!checked.valid) throw new Error("Accepted coding result is missing.");
-          return checked.value;
+        apply: async () => {
+          const { data } = this.state;
+          if (data.mode === "answer-only")
+            return {
+              mode: "answer-only" as const,
+              answer: data.answer ?? "",
+              unresolved: data.questions
+                .filter((item) => item.status === "unresolved")
+                .map((item) => item.question),
+            };
+          const change = await context.status();
+          return {
+            mode: "code-change" as const,
+            change: {
+              ...change,
+              summary: data.plan?.value.summary.slice(0, 2000) ?? change.summary,
+            },
+            noTestsRegistered: data.noTestsRegistered,
+          };
         },
       },
-      // Agent validates the mapped public result with this contract too.
-      resultContract: editingResultContract,
-      // Return store references; payloads live in the host-configured artifact store.
-      artifacts: () => ({ ...tools.evidence(), ...reviewArtifacts.evidence() }),
+      resultContract,
+      artifacts: () =>
+        ({ ...context.evidence.evidence(), ...artifacts.evidence() }) as Record<string, JsonValue>,
     };
   }
 
-  /**
-   * Build one step's session factory.
-   *
-   * `runtime.createTaskFactory` is the normal path and hardcodes `AgentModelTurn`. When
-   * compression is enabled we assemble the same `SessionAgentTaskFactory` by hand around a
-   * provider that builds a compressing turn instead. Both paths share the run's ids and debug
-   * recorder, so the two look identical in the trace apart from the context events.
-   */
-  private taskFactory<TResult>(
-    runtime: AgentRunRuntime,
-    result: IResultContract<TResult>,
-    bindings: IPolicy<AgentTaskBindingRequest, IAgentSessionBinding<TResult>>,
-  ): IAgentTaskFactory<TResult> {
-    if (!this.compression?.enabled || !this.model)
-      return runtime.createTaskFactory(result, bindings);
+  /** Workflow code rechecks the end state; accepted steps alone do not prove it. */
+  private async completionProblem(context: RunContext): Promise<string | null> {
+    const { data } = this.state;
+    if (data.mode === "answer-only")
+      return data.answer ? null : "The answer-only run produced no answer.";
+    const revision = await context.copy.revision();
+    if (data.guardsPassedRevision !== revision) return "Guards did not pass on the final files.";
+    if (data.testsPassedRevision !== revision) return "Tests did not pass on the final files.";
+    if (
+      !data.skeleton ||
+      data.approval?.digest !== data.skeleton.digest ||
+      data.approval.planDigest !== data.plan?.digest
+    )
+      return "The final work does not trace to an approved skeleton.";
+    const status = await context.status();
+    return status.unresolved.length === 0 ? null : status.unresolved.join("; ").slice(0, 1000);
+  }
 
-    const { enabled: _enabled, ...settings } = this.compression;
-    return new SessionAgentTaskFactory(
-      new CompressingCodingSessions(
-        runtime,
-        bindings,
-        this.model.gateway,
-        this.model.profile,
-        this.artifacts,
-        this.model.modelTimeoutMs,
-        settings,
-      ),
-      result,
-      runtime.ids,
-      runtime.debug,
+  private async workingCopy(): Promise<WorkingCopy> {
+    const { run, pinned } = this.options;
+    const created = await stat(path.join(run.workspacePath, "manifest.json")).then(
+      () => true,
+      () => false,
     );
+    return created
+      ? WorkingCopy.open(run.workspacePath, pinned.sourceWorkspace, pinned.excludedDirectories)
+      : WorkingCopy.create(run.workspacePath, pinned.sourceWorkspace, pinned.excludedDirectories);
   }
 }

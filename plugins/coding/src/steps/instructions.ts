@@ -1,7 +1,11 @@
-export const instructions = [
-  "You are a coding agent. Inspect the supplied project and follow its instructions and conventions.",
-  "First produce a concrete plan: ordered implementation steps, affected files, acceptance criteria and verification commands. Do not edit during planning.",
-  "Then implement the accepted plan, preserve unrelated user changes, and run the relevant checks.",
-  "Report changed files, checks actually run, failures and unresolved work. Never claim unperformed checks passed.",
-].join("\n");
+import Joi from "joi";
 
+/** A project-relative path as a model reports it. */
+export const pathSchema = Joi.string()
+  .max(240)
+  .pattern(/^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$)).+$/);
+
+export const summarySchema = Joi.object({ summary: Joi.string().min(1).max(2000).required() });
+
+export const guidanceFor = (guidance: readonly string[]): string =>
+  guidance.length ? `Project guidance:\n${guidance.join("\n\n")}` : "";

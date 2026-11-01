@@ -2,96 +2,108 @@ import Joi from "joi";
 import {
   JoiArgumentsContract,
   JsonValueContract,
+  type CliMount,
+  type ICliExecutor,
   type IExecutionContext,
   type ITool,
   type JsonValue,
-  type WorkspaceEvidence,
-  type EditingResult,
 } from "kushibot";
-import type { CodingCheck } from "../CodingAgentOptions";
-import type { CliWorkspace } from "../infrastructure/workspace/CliWorkspace";
-import type { CliResult, SandboxedCli } from "../infrastructure/sandbox/SandboxedCli";
+import type { WorkingCopy } from "../infrastructure/workspace/WorkingCopy";
+import type { EditScope } from "../infrastructure/workspace/EditScope";
+import type { RunArtifacts } from "../context/RunArtifacts";
 
-/** The sole model-facing tool. Checks and change evidence remain host-owned. */
+/** The host sets this per assignment; nothing the model sends can change it. */
+export type CliAccess =
+  | Readonly<{ kind: "names" }>
+  | Readonly<{ kind: "files"; paths: readonly string[] }>
+  | Readonly<{ kind: "project" }>
+  | Readonly<{ kind: "edit"; scope: EditScope }>;
+
+const SUMMARY: Readonly<Record<CliAccess["kind"], string>> = {
+  names:
+    "Files are empty placeholders: list and search file names with commands such as find, ls or rg --files. Contents are not available.",
+  files: "Only the selected files exist. The project is read-only.",
+  project: "The whole project is read-only.",
+  edit: "Edits apply to a staged copy and are validated against your assignment.",
+};
+
+/** The only tool any model gets. Permissions are enforced by what is mounted, not by parsing. */
 export class CliTool implements ITool {
   readonly argumentsContract = new JoiArgumentsContract(
     "cli-arguments",
-    Joi.object({
-      command: Joi.string().min(1).max(8192).required(),
-    }),
+    Joi.object({ command: Joi.string().min(1).max(8192).required() }),
   );
   readonly resultContract = new JsonValueContract();
   readonly descriptor = {
     id: "cli",
-    version: "1",
+    version: "2",
     description:
-      'cli {"command":"shell command"}: runs /bin/sh in a network-isolated Linux workspace. Returns output and workspace status. Use command "true" to refresh status. Editing calls also run all host-registered checks.',
+      'cli {"command":"shell command"}: runs /bin/sh at /workspace in an isolated Linux environment without network.',
     inputSchema: this.argumentsContract.schema,
     maxArgumentBytes: 16_384,
     maxOutputBytes: 65_536,
   };
+
   constructor(
-    private readonly workspace: CliWorkspace,
-    private readonly sandbox: SandboxedCli,
-    private readonly evidence: WorkspaceEvidence,
-    private readonly checks: readonly CodingCheck[],
-    private readonly readOnly: boolean,
+    private readonly copy: WorkingCopy,
+    private readonly cli: ICliExecutor,
+    private readonly access: CliAccess,
+    private readonly artifacts: RunArtifacts,
   ) {}
+
+  describe(): string {
+    const scope = this.access.kind === "edit" ? ` ${this.access.scope.describe()}` : "";
+    return `${this.descriptor.description} ${SUMMARY[this.access.kind]}${scope}`;
+  }
 
   async execute(input: JsonValue, context: IExecutionContext): Promise<JsonValue> {
     try {
-      const command = (input as { command: string }).command;
-      const result = await this.workspace.execute(this.readOnly, (directory) =>
-        this.sandbox.run(directory, ["/bin/sh", "-c", command], this.readOnly, context),
+      const { command } = input as { command: string };
+      const result = await this.cli.run(
+        {
+          command: ["/bin/sh", "-c", command],
+          mounts: await this.mounts(),
+          workingDirectory: "/workspace",
+        },
+        context,
       );
-      context.signal.throwIfAborted();
-      await this.workspace.refresh(this.evidence);
-      const checks: (CliResult & { id: string })[] = [];
-      if (!this.readOnly) {
-        for (const check of this.checks) {
-          const before = await this.evidence.revision();
-          const checked = await this.workspace.execute(false, (directory) =>
-            this.sandbox.run(directory, [check.command, ...check.args], false, context),
-          );
-          await this.workspace.refresh(this.evidence);
-          this.evidence.recordCheck(
-            check.id,
-            before,
-            await this.evidence.revision(),
-            checked.exitCode,
-          );
-          checks.push({
-            id: check.id,
-            ...checked,
-            output: checked.output.slice(0, 1024),
-            truncated: checked.truncated || checked.output.length > 1024,
-          });
-        }
-      }
-      return this.boundedResponse(result, checks, await this.evidence.status());
+      const rejected = await this.rejectOutsideScope();
+      return {
+        exitCode: result.exitCode,
+        output: result.output,
+        truncated: result.truncated,
+        timedOut: result.timedOut,
+        revision: await this.copy.revision(),
+        ...(rejected.length
+          ? { rejected: `Restored, outside your assignment: ${rejected.join(", ")}` }
+          : {}),
+        ...(result.truncated
+          ? { logRef: await this.artifacts.log("CLI output", command, result.log) }
+          : {}),
+      };
     } catch (error) {
-      return { error: error instanceof Error ? error.message : "Sandboxed CLI failed." };
+      return { error: error instanceof Error ? error.message : "The CLI failed." };
     }
   }
 
-  private boundedResponse(
-    result: CliResult,
-    checks: readonly (CliResult & { id: string })[],
-    status: EditingResult,
-  ): JsonValue {
-    const response = {
-      ...result,
-      checks: checks.map((check) => ({ ...check })),
-      status: { ...status },
-    };
-    const outputs = [response, ...response.checks];
-    // Escaping control characters can make JSON much larger than the raw output.
-    while (Buffer.byteLength(JSON.stringify(response)) > 60_000) {
-      const longest = outputs.reduce((a, b) => (a.output.length >= b.output.length ? a : b));
-      if (!longest.output.length) throw new Error("CLI evidence exceeds its output budget.");
-      longest.output = longest.output.slice(0, Math.floor(longest.output.length / 2));
-      longest.truncated = true;
+  private async mounts(): Promise<readonly CliMount[]> {
+    switch (this.access.kind) {
+      case "names":
+        return this.copy.nameMounts();
+      case "files":
+        return this.copy.fileMounts(this.access.paths);
+      case "project":
+        return this.copy.directoryMounts(false, false);
+      case "edit":
+        return this.copy.directoryMounts(true, true);
     }
-    return response;
+  }
+
+  private async rejectOutsideScope(): Promise<readonly string[]> {
+    if (this.access.kind !== "edit") return [];
+    const { changes, invalid } = await this.copy.stagedChanges();
+    const rejected = [...this.access.scope.outside(changes), ...invalid];
+    for (const file of rejected) await this.copy.restore(file);
+    return rejected;
   }
 }

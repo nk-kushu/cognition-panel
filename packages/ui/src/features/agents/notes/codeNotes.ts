@@ -53,7 +53,7 @@ export type NoteAnchor = Readonly<{
 
 const HEADER = `# Code notes
 
-Notes on this agent, kept by Kushex. Most point at lines of a file; edit them in the Notes view
+Notes on this agent, kept by Cognition Panel. Most point at lines of a file; edit them in the Notes view
 of the agent editor.
 `;
 const OPEN = /<!-- kushex-note ((?:[a-z]+="[^"]*"\s*)*)-->\n([\s\S]*?)\n?<!-- \/kushex-note -->/g;

@@ -26,6 +26,8 @@ export type ChangeReviewProps = Readonly<{
   onClose(): void;
   onApply(): void;
   onCheck?(): void;
+  /** Only compares versions, for changes that are not a proposal yet. */
+  reviewOnly?: boolean;
 }>;
 
 /** A read-only comparison; the apply callback must refer to the same recorded proposal. */
@@ -43,6 +45,7 @@ export function ChangeReview({
   onClose,
   onApply,
   onCheck,
+  reviewOnly = false,
 }: ChangeReviewProps) {
   const { isDarkMode } = useThemeMode();
   const fontSize = useEditorFontSize();
@@ -73,15 +76,19 @@ export function ChangeReview({
               </Button>,
             ]
           : []),
-        <Button
-          key="apply"
-          type="primary"
-          disabled={status !== "ready" || changes.length === 0 || checking}
-          loading={applying}
-          onClick={onApply}
-        >
-          {applied ? "Applied" : "Accept and apply"}
-        </Button>,
+        ...(reviewOnly
+          ? []
+          : [
+              <Button
+                key="apply"
+                type="primary"
+                disabled={status !== "ready" || changes.length === 0 || checking}
+                loading={applying}
+                onClick={onApply}
+              >
+                {applied ? "Applied" : "Accept and apply"}
+              </Button>,
+            ]),
       ]}
     >
       <div className="kx:flex kx:flex-col kx:gap-3">

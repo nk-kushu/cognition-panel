@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Kushex coding agent plugin.",
+  "description": "Cognition Panel coding agent plugin.",
   "files": [
     "kushex-plugin.json",
     "**/*.ts",

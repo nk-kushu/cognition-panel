@@ -2,7 +2,7 @@
 
 ## pnpm workspace packages
 
-Kushex is a pnpm workspace. `pnpm-workspace.yaml` includes every folder under
+Cognition Panel is a pnpm workspace. `pnpm-workspace.yaml` includes every folder under
 `packages/*` and `apps/*` that has a `package.json`. These are our packages:
 
 | Package | Folder | Kind | Published to npm | Depends on (workspace) | Status |

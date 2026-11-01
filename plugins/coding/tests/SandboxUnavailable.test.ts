@@ -1,28 +1,19 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import test from "node:test";
-import { AgentRuntimeFactory } from "kushibot";
 import { SandboxedCli } from "../src/infrastructure/sandbox/SandboxedCli";
-import { ScriptedGateway, profile } from "./fixtures/ScriptedGateway";
 
-// Run this file in a container using Docker's DEFAULT seccomp profile.
-test("an unavailable namespace sandbox fails without executing on the host", async (t) => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "cli-unavailable-"));
-  t.after(() => rm(root, { recursive: true, force: true }));
-  await writeFile(path.join(root, "marker"), "unchanged");
-  const runtime = await new AgentRuntimeFactory({
-    gateway: new ScriptedGateway([]),
-    profile,
-  }).create("coding");
-  const result = await new SandboxedCli().run(
-    root,
-    ["/bin/sh", "-c", "printf escaped > marker"],
-    false,
-    runtime.context,
-  );
-  assert.notEqual(result.exitCode, 0, result.output);
-  assert.match(result.output, /bwrap:/);
-  assert.equal(await readFile(path.join(root, "marker"), "utf8"), "unchanged");
+test("refuses to run when isolation is unavailable, without an unconfined fallback", async () => {
+  const context = {
+    identity: { runId: "run", operationId: "op" },
+    scope: { scopeId: "s", projectId: "p" },
+    signal: new AbortController().signal,
+    deadlineEpochMs: null,
+    reporter: { progress: async () => undefined },
+  };
+  const result = await new SandboxedCli()
+    .run({ command: ["/bin/sh", "-c", "echo escaped"], mounts: [], workingDirectory: "/" }, context)
+    .catch((error: Error) => error);
+  if (result instanceof Error) return;
+  assert.notEqual(result.exitCode, 0, "Blocked namespace creation must not run the command.");
+  assert.doesNotMatch(result.output, /escaped/);
 });

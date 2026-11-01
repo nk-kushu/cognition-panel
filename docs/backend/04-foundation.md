@@ -11,7 +11,7 @@ build on. Actor and read-only workspace access are implemented in
 | ------------------ | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
 | HTTP and routing   | Fastify 5                                                          | Mature lifecycle (`close`, in-flight draining), request IDs, raw response access for SSE later                 |
 | Request validation | Zod 4, as Fastify route schemas                                    | One schema language for config, requests and future `packages/contracts` DTOs; parsed values replace raw input |
-| Data access        | Prisma ORM 7 (`prisma-client` generator) with `@prisma/adapter-pg` | Typed client for Kushex tables over node-postgres, the driver Kushibot's PostgreSQL acceptance suite uses      |
+| Data access        | Prisma ORM 7 (`prisma-client` generator) with `@prisma/adapter-pg` | Typed client for Cognition Panel tables over node-postgres, the driver Kushibot's PostgreSQL acceptance suite uses      |
 | Migrations         | Prisma Migrate (`prisma migrate deploy`)                           | Schema in `prisma/schema.prisma`, SQL migrations generated and tracked by Prisma                               |
 | Logging            | pino (Fastify's logger), JSON to stdout                            | Structured logs; consumers depend on the narrow `Logger` contract                                              |
 | Tests              | Vitest                                                             | Same runner as the frontend packages                                                                           |
@@ -37,7 +37,7 @@ build on. Actor and read-only workspace access are implemented in
 - `PrismaDatabase` owns the `PrismaClient` and its node-postgres pool as a
   `ManagedResource`. Startup runs `SELECT 1`; shutdown calls `$disconnect()`, which
   closes the pool.
-- Kushex tables live in the PostgreSQL schema **`kushex`**. Generated queries are
+- Cognition Panel tables live in the PostgreSQL schema **`kushex`**. Generated queries are
   qualified with it, and the pool's `search_path` is `kushex`. Kushibot's `kushibot_*`
   tables stay in `public`, so Prisma's drift detection never sees them.
 - Repositories take the `PrismaClient` (or a `Prisma.TransactionClient` inside
@@ -127,24 +127,24 @@ The initial deployment model is **one local operator on a single machine**:
   `LocalOperatorActorResolver` returns the fixed operator. Services receive the
   actor explicitly, so real authentication later replaces only the resolver.
 - Kushibot scope mapping: one scope for the local operator, with `project_id` set to
-  the Kushex project ID and `workspace_key` to the Kushex workspace ID.
+  the Cognition Panel project ID and `workspace_key` to the Cognition Panel workspace ID.
 - Loopback is not a complete boundary. Any web page in the operator's browser can
   send requests to `localhost`. Before adding the first **state-changing** route,
-  the transport guard added in phase 2 is required. It rejects requests whose `Origin` is not the Kushex
+  the transport guard added in phase 2 is required. It rejects requests whose `Origin` is not the Cognition Panel
   origin, and requests whose `Host` is not an expected local name (this protects
   against DNS rebinding). Mutating routes accept only `application/json`.
 - An Accept decision is the operator's action, recorded with this actor. That is
   enough for single-operator review. It is not multi-user approval.
-- Exposing Kushex beyond loopback, multi-user use, or embedding in a host on another
+- Exposing Cognition Panel beyond loopback, multi-user use, or embedding in a host on another
   origin all require real authentication first (see "Later decisions" in the plan).
 
 ## Workspace provisioning
 
-- Kushex **registers existing checkouts**. It does not clone repositories or hold Git
+- Cognition Panel **registers existing checkouts**. It does not clone repositories or hold Git
   credentials initially.
 - The operator mounts one or more host directories into the backend and lists them,
   comma-separated, in `KUSHEX_WORKSPACES_ROOT` (for example `/workspaces`). These
-  mounts are separate from the dev-mode mounts used to edit Kushex itself.
+  mounts are separate from the dev-mode mounts used to edit Cognition Panel itself.
 - A project workspace is a path prefixed with its root's basename
   (`projects/app`). It is resolved with
   `realpath`, and anything resolving outside the root (`..`, absolute paths,

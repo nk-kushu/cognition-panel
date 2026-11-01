@@ -31,7 +31,7 @@ Symlinks within the checkout can be read. Escaping and broken links are omitted
 from listings. Ordinary files and directories only are exposed.
 
 Compose mounts `${KUSHEX_WORKSPACES_HOST_ROOT:-../workspaces}` at `/workspaces`,
-read only, separately from Kushex's development source mounts. Relative host mount
+read only, separately from Cognition Panel's development source mounts. Relative host mount
 paths resolve from `docker/compose.standalone.yml`. The default is the repository's
 empty `workspaces/` folder. Set `KUSHEX_WORKSPACES_HOST_ROOT` to an existing absolute
 host directory to browse real checkouts:

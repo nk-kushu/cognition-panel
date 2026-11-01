@@ -6,7 +6,7 @@ See [the agent guide](../../plugins/README.md#local-plugins) for installation an
 ## 1. What the first version does
 
 A plugin is a folder containing a manifest and one or more agents. Installing the
-plugin makes its agents available in Kushex.
+plugin makes its agents available in Cognition Panel.
 
 For example, a **Development Agents** plugin could provide a coding agent and a
 review agent. After installation, the user can:
@@ -18,7 +18,7 @@ review agent. After installation, the user can:
 
 **The first version contributes agents only.** It does not add plugin-defined
 pages, tools, capabilities, event handlers, or background services. The Plugins
-page is part of Kushex itself and displays plugin metadata and agents.
+page is part of Cognition Panel itself and displays plugin metadata and agents.
 
 ## 2. How it works
 
@@ -109,13 +109,13 @@ duplicate plugin or agent IDs, missing entries, and paths that escape their
 plugin or agent directory, including escapes through symlinks. Report errors
 against the affected plugin. Never silently choose between duplicate IDs.
 
-**Result:** Kushex has one definition of an installed plugin and its agents.
+**Result:** Cognition Panel has one definition of an installed plugin and its agents.
 
 ### Step 2 — Discover locally installed plugins
 
 Read plugin folders from a configured plugins directory when the server starts.
 For this version, installation means placing a complete plugin folder there and
-restarting Kushex. Removal means removing the folder and restarting. Valid
+restarting Cognition Panel. Removal means removing the folder and restarting. Valid
 plugins are available automatically; a marketplace, upload flow, enable/disable
 controls, and automatic reload are outside this version.
 
@@ -125,7 +125,7 @@ contributions is invalid, register none of that plugin's agents. If IDs conflict
 mark the conflicting plugins unavailable rather than making discovery order decide.
 
 **Result:** adding a local package makes its agents discoverable without editing
-Kushex application code.
+Cognition Panel application code.
 
 ### Step 3 — Package the coding agent as an independent plugin
 
@@ -202,7 +202,7 @@ agents. Check that:
 
 **Done means:** a local plugin can contribute multiple agents, and the user can
 find them by plugin, edit them, select them in chat, and run or debug them through
-Kushex's existing agent features.
+Cognition Panel's existing agent features.
 
 ## 5. First-version boundary
 

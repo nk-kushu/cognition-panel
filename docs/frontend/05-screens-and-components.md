@@ -7,7 +7,7 @@ picker, connection status and color-mode switch, and a scrollable `Content`.
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│ Kushex   [project ▾] [workspace ▾]        ● connected  ☾  ⚙   │  Header
+│ Cognition Panel   [project ▾] [workspace ▾]        ● connected  ☾  ⚙   │  Header
 ├──────────┬────────────────────────────────────────────────────┤
 │ Runs     │                                                    │
 │ Sessions │   <route content>                                  │

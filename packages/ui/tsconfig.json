@@ -2,7 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["vite/client", "vitest/globals"],
-    "paths": { "antd": ["./node_modules/antd"], "@kushex/ui": ["./src/index.ts"] }
+    "paths": {
+      "antd": ["./node_modules/antd"],
+      "@kushex/ui": ["./src/index.ts"],
+      "@kushex/workflow-ui": ["../workflow-ui/src/index.ts"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }

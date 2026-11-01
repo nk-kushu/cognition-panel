@@ -18,7 +18,7 @@ export type KushexHandle = Readonly<{
 }>;
 
 /**
- * Mount the Kushex panel into any element. Each call gets its own React root and store,
+ * Mount the Cognition Panel panel into any element. Each call gets its own React root and store,
  * so several panels on one page are independent.
  */
 export function mountKushex(el: HTMLElement, options: MountOptions): KushexHandle {

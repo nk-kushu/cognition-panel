@@ -14,7 +14,7 @@ packages/server/
 ├── tsconfig.json
 ├── prisma.config.ts               # Prisma CLI config (schema path, `kushex` schema URL)
 ├── prisma/
-│   ├── schema.prisma              # Kushex models
+│   ├── schema.prisma              # Cognition Panel models
 │   └── migrations/                # Prisma Migrate history
 ├── src/
 │   ├── generated/prisma/          # Prisma Client output (gitignored)
@@ -131,12 +131,12 @@ when it has independent dependencies or coordination responsibilities. Do not
 introduce abstract base controllers, universal entity managers, or a generic
 repository that hides feature-specific operations.
 
-## Executions: what Kushex writes and reads
+## Executions: what Cognition Panel writes and reads
 
-Kushex does not write execution state. It sends commands, and Kushibot changes
+Cognition Panel does not write execution state. It sends commands, and Kushibot changes
 the state.
 
-**Kushex writes:**
+**Cognition Panel writes:**
 
 - Commands into Kushibot through `KushibotAgentRuntime`: submit and cancel go
   through `ExecutionDispatcher`. Kushibot creates and updates the run, session,
@@ -147,34 +147,34 @@ the state.
 - Conversation messages, appended explicitly through Kushibot's conversation
   store (`IConversationStore`).
 
-**Kushex reads:**
+**Cognition Panel reads:**
 
 - Execution status, lifecycle, and outcome, exposed as read projections. Kushibot
   is the authority on run state.
 - Events, normalized for the `ExecutionEventStream` (SSE) sent to the browser.
 - Artifacts and usage.
 
-Kushex never updates an execution record, edits a lifecycle, or inserts execution
+Cognition Panel never updates an execution record, edits a lifecycle, or inserts execution
 events directly. Keeping its own copy of run state would create the competing
 execution store that [01-overview](01-overview.md) rules out.
 
-## Workspaces: Kushex checkout versus Kushibot edit workspace
+## Workspaces: Cognition Panel checkout versus Kushibot edit workspace
 
 Two different things are called "workspace". Do not merge them.
 
-- **Kushex `Workspace`** is the real project checkout: registration, a relative checkout path under the deployment-wide allowed root,
-  branch/revision metadata, and host access. Kushex owns `WorkspaceRepository`,
+- **Cognition Panel `Workspace`** is the real project checkout: registration, a relative checkout path under the deployment-wide allowed root,
+  branch/revision metadata, and host access. Cognition Panel owns `WorkspaceRepository`,
   `WorkspaceFileSystem` (real tree and file reads), and `WorkspaceGit`. Kushibot
   provides none of this.
 - **Kushibot workspace** is an isolated, database-backed copy of selected text
   files that the agent edits safely (`SqlTextWorkspaceProvider`,
   `SqlWorkspaceFiles`, `SqlWorkspaceEditGate`). It is bounded to 256 files, 64 KiB
   per file, and 1 MiB total, and edits are revision-checked so stale writes are
-  rejected. It never touches the real disk or Git. In Kushex docs, call it the
+  rejected. It never touches the real disk or Git. In Cognition Panel docs, call it the
   "isolated edit workspace" to avoid confusion.
 
-Flow: Kushex seeds selected files from the real checkout into an isolated edit
-workspace, the agent edits that copy, and Kushex applies the accepted result to
+Flow: Cognition Panel seeds selected files from the real checkout into an isolated edit
+workspace, the agent edits that copy, and Cognition Panel applies the accepted result to
 the real checkout after review and approval.
 
 ## Dependency rules

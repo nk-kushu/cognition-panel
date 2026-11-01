@@ -40,7 +40,7 @@ Side view, chat panel and bottom panel can be collapsed and resized.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ Kushex   [ Project ▾ ]                    [ search ]        ( ◐ ) ( ⚙ ) (👤) │
+│ Cognition Panel   [ Project ▾ ]                    [ search ]        ( ◐ ) ( ⚙ ) (👤) │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 

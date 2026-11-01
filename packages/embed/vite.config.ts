@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => ({
     cssCodeSplit: false,
     lib:
       mode === "iife"
-        ? { entry: "src/iife.ts", formats: ["iife"], name: "Kushex", fileName: () => "kushex.iife.js" }
+        ? { entry: "src/iife.ts", formats: ["iife"], name: "Cognition Panel", fileName: () => "kushex.iife.js" }
         : { entry: "src/index.ts", formats: ["es"], fileName: "index" },
   },
   test: {

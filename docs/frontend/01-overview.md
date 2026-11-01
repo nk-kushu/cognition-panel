@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Kushex UI is an operator panel over a kushibot runtime. It lets a person:
+The Cognition Panel UI is an operator panel over a kushibot runtime. It lets a person:
 
 - browse workflow runs and drill into step runs, attempts and agentic sessions;
 - follow a run live (lifecycle transitions, debug events, usage);

@@ -35,7 +35,7 @@ export function TopBar({ compact }: Readonly<{ compact?: boolean }>) {
       className={`kx:flex kx:h-12 kx:shrink-0 kx:items-center kx:gap-3 kx:bg-surface kx:px-3 ${borderB}`}
     >
       <Typography.Text strong className="kx:shrink-0">
-        Kushex
+        Cognition Panel
       </Typography.Text>
       <Select
         aria-label="Project"

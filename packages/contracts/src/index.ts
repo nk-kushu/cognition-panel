@@ -333,3 +333,57 @@ export type AgentRunDebugEventsDto = Readonly<{
   /** More events are already stored; ask again with `cursor` without waiting. */
   more: boolean;
 }>;
+
+/** One agent's saved settings for a project; the agent's backend schema validates them. */
+export type AgentSettingsDto = Readonly<{
+  settings: AgentConfiguration;
+  /** 0 until the first save. */
+  revision: number;
+}>;
+export type UpdateAgentSettingsRequest = Readonly<{
+  settings: AgentConfiguration;
+  baseRevision: number;
+}>;
+
+export type AgentDefinitionKind = "skill" | "guard";
+/** A skill or guard's current version. Saving adds a version; runs keep the one they pinned. */
+export type AgentDefinitionDto = Readonly<{
+  id: string;
+  kind: AgentDefinitionKind;
+  enabled: boolean;
+  versionId: string;
+  version: number;
+  content: AgentConfiguration;
+}>;
+export type SaveAgentDefinitionRequest = Readonly<{
+  kind: AgentDefinitionKind;
+  enabled: boolean;
+  content: AgentConfiguration;
+}>;
+
+/** A preference remembered for one project; it is never shared across projects. */
+export type ProjectMemoryDto = Readonly<{
+  id: string;
+  statement: string;
+  createdAt: string;
+}>;
+
+export type AgentWaitKind = "clarification" | "decision" | "skeleton-review";
+export type AgentWaitStatus = "pending" | "answered" | "cancelled";
+/** `payload` is what the agent showed; its shape depends on `kind`. */
+export type AgentWaitDto = Readonly<{
+  runId: string;
+  kind: AgentWaitKind;
+  status: AgentWaitStatus;
+  payload: AgentConfiguration;
+  response: AgentConfiguration | null;
+}>;
+export type AnswerAgentWaitRequest = Readonly<{
+  /** Clarification or decision: a choice label. Review: approve, request-changes or change-plan. */
+  choice: string;
+  text: string;
+  /** Review only: the digest shown, so an approval binds to that exact version. */
+  digest?: string;
+  /** Saved for this project only; shown to the user before they choose it. */
+  remember?: string;
+}>;

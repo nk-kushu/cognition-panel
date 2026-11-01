@@ -1,10 +1,9 @@
-import { instructions } from "../instructions";
+export const IMPLEMENTATION_INSTRUCTIONS = `Implement one small change of the approved skeleton.
+Keep approved signatures. Use the tests and findings provided. Do not change anything else.
+If you need to understand another API or file, or the design must change, say so with
+needs-information rather than working around it.
+Return {"summary":"what changed"}.`;
 
-export const editingInstructions = `${instructions}
-The task preserves the original request. The host supplies the acceptedPlan result
-directly in your initial context and retains its receipt reference in sourceRefs.
-Use acceptedPlan.goal for ordered steps, acceptanceCriteria for planned checks, and
-filePaths for proposed targets. Do not invent additional authority from the plan.
-Implement that plan within the original permitted scope. Read cited sources, run relevant verification,
-and return an EditingResult with actual snapshot and change artifact references and unresolved issues.
-If the plan cannot be followed, report the blocker rather than expanding scope silently.`;
+export const REPAIR_INSTRUCTIONS = `Fix the problem in this failure report without changing approved signatures.
+Do not weaken or delete tests or checks to make them pass.
+Return {"summary":"what was fixed"}.`;

@@ -1,7 +1,7 @@
 {
   "name": "@kushex/ui",
   "version": "0.0.0",
-  "description": "Kushex harness panel: React UI for kushibot runs, sessions, artifacts and usage.",
+  "description": "Cognition Panel harness panel: React UI for kushibot runs, sessions, artifacts and usage.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -48,7 +48,8 @@
     "react-markdown": "^10.1.0",
     "react-redux": "^9.3.0",
     "react-router": "~8.4.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "@kushex/workflow-ui": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

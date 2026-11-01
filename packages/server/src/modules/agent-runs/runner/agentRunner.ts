@@ -17,6 +17,9 @@ type ChatRequest = Readonly<{
   workspace: string;
   signal: AbortSignal;
   progress: (message: string) => void;
+  host?: unknown;
+  credentials?: Readonly<Record<string, string>>;
+  resume?: unknown;
   /**
    * kushibot's `IScopedDebugRecorderFactory`, for `AgentRuntimeFactory`'s `debug` option: its
    * events are stored and shown on the run's Debug events page. Absent without kushibot.
@@ -83,9 +86,12 @@ async function run(command: Extract<RunnerCommand, { type: "start" }>): Promise<
       message: command.message,
       files: command.files,
       configuration: command.configuration ?? {},
+      ...(command.credentials ? { credentials: command.credentials } : {}),
       workspace: command.workspace,
       signal: controller.signal,
       progress: (message) => void report({ type: "progress", message: String(message) }),
+      ...(command.host === undefined ? {} : { host: command.host }),
+      ...(command.resume === undefined ? {} : { resume: command.resume }),
       ...(debug ? { debug: debug.factory } : {}),
     };
     try {

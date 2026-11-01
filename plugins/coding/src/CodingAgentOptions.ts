@@ -1,45 +1,65 @@
-import type { CodexCliOptions, IArtifactWriter, IAgentRuntimeOptions } from "kushibot";
-import type { CodingEngineeringConfiguration } from "./engineering/CodingEngineeringConfiguration";
-import type { CodingCompressionSettings } from "./context/createCodingCompression";
+import type {
+  AgentRunRuntime,
+  IArtifactWriter,
+  ICliExecutor,
+  IDecisionUnit,
+  IModelGateway,
+  IScopedDebugRecorderFactory,
+  ModelProfile,
+} from "kushibot";
+import type {
+  CodingSettings,
+  GuardDefinition,
+  RequestMode,
+  SkillDefinition,
+} from "./engineering/types";
+import type { RunDirectory } from "./infrastructure/run/RunDirectory";
 
-/** Only the host can register commands; model output selects a name, never a shell string. */
-export interface CodingCheck {
-  readonly id: string;
-  readonly command: string;
-  readonly args: readonly string[];
+export type ModelRole =
+  | "default"
+  | "investigationPlanning"
+  | "implementation"
+  | "guardReview"
+  | "skillScheduler"
+  | "answer";
+
+/** Selects a model connection for one role; the run pins the result. */
+export interface IModelBindings {
+  /** `modelId` is a skill's or guard's own choice; empty uses the role's model. */
+  bind(
+    role: ModelRole,
+    modelId?: string,
+  ): Readonly<{ gateway: IModelGateway; profile: ModelProfile }>;
 }
-/** Common run settings plus exactly one model connection choice. */
-export type CodingAgentOptions = Omit<IAgentRuntimeOptions, "gateway"> & {
-  readonly workspace: string;
-  /** Opt in to DecisionUnit-selected skills and enforced reviews. Enabled by the chat host. */
-  readonly engineering?: CodingEngineeringConfiguration;
-  /** Host-configured Kushibot store; change payloads are written here. */
-  readonly artifacts: IArtifactWriter;
-  readonly checks?: readonly CodingCheck[];
-  /** Replaces default snapshot directory exclusions; [] tracks generated folders too.
-   * .git and node_modules are always skipped. Explicit file allowlists bypass exclusions.
-   */
-  readonly excludedDirectories?: readonly string[];
-  /**
-   * Opt in to context compression for this agent's sessions.
-   *
-   * Omitted (the default) keeps kushibot's `AgentModelTurn`: one growing conversation that
-   * stops at the window limit. Supplying this switches sessions to a fragment-based context
-   * that collapses repeated observations into verified summaries stored as artifacts.
-   *
-   * It is off by default because it changes the prompt shape the model sees — see
-   * `CompressingCodingTurn` for what changes and why.
-   */
-  readonly compression?: CodingCompressionSettings & { readonly enabled: boolean };
-} & (
-    | {
-        readonly gateway: IAgentRuntimeOptions["gateway"];
-        readonly provider?: never;
-        readonly codex?: never;
-      }
-    | {
-        readonly provider: "codex-cli";
-        readonly codex?: CodexCliOptions;
-        readonly gateway?: never;
-      }
-  );
+
+/** Everything fixed when a run starts. Saved with the run, so edits never reach it. */
+export type PinnedRun = Readonly<{
+  schemaVersion: 1;
+  message: string;
+  files: readonly string[];
+  explicitMode: RequestMode | null;
+  sourceWorkspace: string;
+  projectId: string;
+  settings: CodingSettings;
+  skills: readonly SkillDefinition[];
+  guards: readonly GuardDefinition[];
+  memory: readonly Readonly<{ id: string; statement: string }>[];
+  conversation: readonly Readonly<{ role: "user" | "agent"; text: string }>[];
+  excludedDirectories: readonly string[];
+}>;
+
+export type CodingAgentOptions = Readonly<{
+  run: RunDirectory;
+  pinned: PinnedRun;
+  artifacts: IArtifactWriter;
+  models: IModelBindings;
+  /** JEV in production; any DecisionUnit in tests. */
+  decisions: (context: DecisionRuntime) => IDecisionUnit;
+  cli: ICliExecutor;
+  debug?: IScopedDebugRecorderFactory;
+  /** Model call timeout; slower models need more than the library default. */
+  modelTimeoutMs?: number;
+  maxTurns?: number;
+}>;
+
+export type DecisionRuntime = AgentRunRuntime;

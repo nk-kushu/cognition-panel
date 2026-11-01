@@ -13,7 +13,8 @@
     "@kushex/ui": "workspace:*",
     "antd": "^6.6.7",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "@kushex/workflow-ui": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

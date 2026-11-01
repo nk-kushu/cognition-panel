@@ -1,8 +1,8 @@
 {
-  "name": "kushex",
+  "name": "cognition-panel",
   "private": true,
   "type": "module",
-  "description": "Kushex harness panel monorepo.",
+  "description": "Cognition Panel harness panel monorepo.",
   "scripts": {
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
@@ -12,9 +12,7 @@
     "dev": "pnpm --filter @kushex/standalone dev",
     "changeset": "changeset",
     "typecheck:agent:coding": "tsc -p plugins/coding/tsconfig.json",
-    "test:agent:coding": "TSX_TSCONFIG_PATH=plugins/coding/tsconfig.json node --import ./packages/server/node_modules/tsx/dist/loader.mjs --test plugins/coding/tests/CodingAgent.test.ts",
-    "test:agent:coding:engineering": "TSX_TSCONFIG_PATH=plugins/coding/tsconfig.json node --import ./packages/server/node_modules/tsx/dist/loader.mjs --test plugins/coding/tests/CodingEngineering.test.ts",
-    "test:agent:coding:compression": "TSX_TSCONFIG_PATH=plugins/coding/tsconfig.json node --import ./packages/server/node_modules/tsx/dist/loader.mjs --test plugins/coding/tests/CodingCompression.test.ts",
+    "test:agent:coding": "TSX_TSCONFIG_PATH=plugins/coding/tsconfig.json node --import ./packages/server/node_modules/tsx/dist/loader.mjs --test plugins/coding/tests/CodingAgent.test.ts plugins/coding/tests/OpenRouterModels.test.ts",
     "test:agent:coding:container": "sh docker/test-coding-cli.sh"
   },
   "devDependencies": {

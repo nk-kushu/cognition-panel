@@ -87,7 +87,7 @@ export function mountKushex(el: HTMLElement, options: MountOptions): KushexHandl
 | Package | Output | Externals |
 | --- | --- | --- |
 | `@kushex/ui` | ESM + `.d.ts` + `style.css` | `react`, `react-dom`, `antd`, `@ant-design/icons` |
-| `@kushex/embed` | ESM (pages as lazy chunks) + `dist/kushex.iife.js` exposing `window.Kushex.mountKushex` | none |
+| `@kushex/embed` | ESM (pages as lazy chunks) + `dist/kushex.iife.js` exposing `window.Cognition Panel.mountKushex` | none |
 
 `@kushex/embed` builds the panel from `packages/ui/src` (Vite alias) so the panel
 CSS is compiled there as an inline string.

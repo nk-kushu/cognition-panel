@@ -1,7 +1,7 @@
 # Backend plan
 
 Status: **proposal**. These documents define how to build `packages/server` for
-Kushex's coding workbench. The application foundation (phase 1) and project/workspace browsing (phase 2) are implemented;
+Cognition Panel's coding workbench. The application foundation (phase 1) and project/workspace browsing (phase 2) are implemented;
 see [04-foundation.md](04-foundation.md) and [05-projects-and-workspaces.md](05-projects-and-workspaces.md).
 
 | Document | Purpose |

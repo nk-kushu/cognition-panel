@@ -31,7 +31,7 @@ checks pass.
 - Define browser-safe API DTOs. Wire project selection and file browsing to server
   data; remove fixture assumptions as those screens are connected.
 - Extend Docker with deliberate coding workspace mounts/storage. Keep these separate
-  from the existing mounts used to edit Kushex itself.
+  from the existing mounts used to edit Cognition Panel itself.
 
 **Done when:** a project survives restart, file browsing reads its authorized
 workspace, and invalid paths/project access fail through tested public APIs.

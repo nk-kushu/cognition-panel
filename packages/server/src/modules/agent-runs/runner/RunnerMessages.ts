@@ -7,6 +7,12 @@ export type RunnerCommand =
       message: string;
       configuration?: import("@kushex/contracts").AgentConfiguration;
       files: readonly string[];
+      /** What the server loaded for this project; the agent process has no database. */
+      host?: unknown;
+      /** Reopens a waiting run; absent for a new message. */
+      resume?: unknown;
+      /** Private, in-memory provider credentials; never persisted with run state. */
+      credentials?: Readonly<Record<string, string>>;
     }>
   /** Calls the loaded agent's `chat`; sent once the debugger has bound its breakpoints. */
   | Readonly<{ type: "call" }>

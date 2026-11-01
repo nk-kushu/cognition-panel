@@ -1,11 +1,11 @@
 # 01 — Backend overview
 
-Status: **proposal**, based on the current Kushex frontend and the sibling
-[kushibot implementation](../../../kushibot/README.md). Kushex is a coding
+Status: **proposal**, based on the current Cognition Panel frontend and the sibling
+[kushibot implementation](../../../kushibot/README.md). Cognition Panel is a coding
 workbench: choose a project, discuss work with an agent, organize tasks, inspect
 files and proposed changes, and keep project notes.
 
-**Kushex is the application and host for Kushibot.** Reuse Kushibot's conversation,
+**Cognition Panel is the application and host for Kushibot.** Reuse Kushibot's conversation,
 execution, workspace-editing, persistence, and publication capabilities through adapters.
 Backend modules expose application use cases and UI projections; they must not
 reimplement framework state machines or create competing execution stores.
@@ -15,7 +15,7 @@ This overview refines the ownership assumptions in the initial
 Read their proposed execution/change classes as thin integration facades where
 Kushibot already owns the behavior. Proposed `ThreadRepository`, `MessageRepository`,
 and PostgreSQL conversation repositories are superseded by Kushibot
-`IConversationStore`; do not implement parallel stores in Kushex. The concrete
+`IConversationStore`; do not implement parallel stores in Cognition Panel. The concrete
 application integration is still to be built.
 
 ## What exists today
@@ -54,7 +54,7 @@ The following capabilities are present in source and exported by
 Public consumers should import from the package root; these source links are
 for architectural evidence.
 
-| Concern | Existing implementation | Kushex integration still required |
+| Concern | Existing implementation | Cognition Panel integration still required |
 | --- | --- | --- |
 | Execution identity and lifecycle | `ExecutionLifecycle`, workflow/step/session lifecycle definitions, [`WorkflowEngine`](../../../kushibot/src/workflows/WorkflowEngine.ts), `WorkflowRun`, `StepRunner` | Map app requests to registered workflows/executors and expose authoritative status |
 | Execution persistence and command identity | [`PostgresqlPersistenceFactory`](../../../kushibot/src/persistence/postgresql/PostgresqlPersistenceFactory.ts), `SqlExecutionRecordRepository`, `SqlWorkflowRunStore`; version checks and save-command receipts | Supply SQL driver binding, scope instances, initialization, app request receipts, and ID mappings |
@@ -69,7 +69,7 @@ for architectural evidence.
 
 Important limits of the current implementation:
 
-- **SQL support is not a bundled driver.** Kushex must implement
+- **SQL support is not a bundled driver.** Cognition Panel must implement
   [`ISqlDatabase`](../../../kushibot/src/persistence/sql/ISqlDatabase.ts), including
   single-connection transactions, rollback, safe result conversion, and serialized
   migrations. Framework stores supply their schema/SQL behavior; the host wires
@@ -78,7 +78,7 @@ Important limits of the current implementation:
   the agent session loop does not supply a ready-made durable chat-thread API.
   Conversation storage is now a separate Kushibot capability: `IConversationStore`
   persists threads and ordered user/assistant messages, with pagination, optional
-  run/session links, and idempotent creation. Kushex owns the conversation UX, access
+  run/session links, and idempotent creation. Cognition Panel owns the conversation UX, access
   checks, selected context, and mapping to runs; it calls this store rather than
   creating duplicate thread/message repositories. Hosts still supply session journal
   persistence where needed; conversations are not captured automatically.
@@ -101,15 +101,15 @@ Important limits of the current implementation:
 
 ## Architecture
 
-Start with a **modular monolith**: one Kushex Node.js/TypeScript backend hosting
+Start with a **modular monolith**: one Cognition Panel Node.js/TypeScript backend hosting
 Kushibot, backed by PostgreSQL. App and framework storage may share a physical
 database, with distinct schema/table ownership and explicit transaction boundaries.
 
 ```mermaid
 flowchart LR
-  UI[Standalone or embedded panel] --> HTTP[Kushex HTTP controllers]
+  UI[Standalone or embedded panel] --> HTTP[Cognition Panel HTTP controllers]
   HTTP --> App[Projects, chat, tasks, notes and settings services]
-  App --> DB[Kushex application tables]
+  App --> DB[Cognition Panel application tables]
   App --> Conversations[Kushibot IConversationStore]
   Conversations --> Stores[Kushibot SQL stores]
   App --> Bridge[Kushibot application adapter]
@@ -117,7 +117,7 @@ flowchart LR
   Framework --> Stores[Kushibot SQL stores]
   Framework --> Host[Host SQL, source, approval and target adapters]
   Host --> External[PostgreSQL, model transport and project checkout]
-  Stores --> Events[Kushex authorized event projections]
+  Stores --> Events[Cognition Panel authorized event projections]
   Events --> SSE[SSE transport]
   SSE --> UI
 ```
@@ -135,7 +135,7 @@ and authentication support; current public panel options do not expose these yet
 
 ## Feature ownership
 
-| Module | Kushex owns | Delegates to Kushibot |
+| Module | Cognition Panel owns | Delegates to Kushibot |
 | --- | --- | --- |
 | `projects` | Project catalog, name, description, access, stable identity | Map IDs to framework execution scope |
 | `workspaces` | Checkout registration, allowed root, branch/revision metadata, host Git/filesystem adapters | Isolated text workspaces and revision-checked editing |
@@ -154,7 +154,7 @@ Task status (`backlog`, `in-progress`, `in-review`, `done`) is independent of
 framework lifecycle. Finishing an agent execution does not approve its changes
 or automatically finish the task.
 
-Kushex tables hold app entities, launch-command receipts, ID associations, and
+Cognition Panel tables hold app entities, launch-command receipts, ID associations, and
 any rebuildable UI projections. Kushibot stores remain authoritative for durable
 conversation threads/messages as well as execution records, debug events, artifacts,
 usage, isolated editing state, and publication records. Do not create parallel
@@ -163,7 +163,7 @@ changes through a host target adapter.
 
 ## Conversation storage integration
 
-Conversation persistence is implemented in the sibling Kushibot source; the Kushex
+Conversation persistence is implemented in the sibling Kushibot source; the Cognition Panel
 backend and UI are not connected to it yet. See the
 [conversation storage guide](../../../kushibot/docs/conversations/README.md) for
 its supported contracts and real-driver acceptance commands.
@@ -181,7 +181,7 @@ its supported contracts and real-driver acceptance commands.
   from 1 to 100. Keep the last observed sequence when polling an existing thread.
 - Reuse message/command IDs, exact content, creation timestamp, and optional
   run/session IDs on retries. Identical appends return the stored message;
-  conflicting reuse returns `IDENTITY_CONFLICT`, which Kushex should map to HTTP
+  conflicting reuse returns `IDENTITY_CONFLICT`, which Cognition Panel should map to HTTP
   `409`. Appends are immutable; links supplied later require a separate app
   association rather than rewriting an existing message.
 - Explicitly persist user messages and completed assistant responses. Kushibot
@@ -195,31 +195,31 @@ its supported contracts and real-driver acceptance commands.
 Conversation persistence has passed the new SQLite and PostgreSQL acceptance
 suites, including ordering, paging, scope isolation, concurrent writes, rollback,
 and retry after a lost commit acknowledgement. This verifies the library store;
-Kushex still needs its own database binding, authenticated HTTP integration,
+Cognition Panel still needs its own database binding, authenticated HTTP integration,
 message-to-execution reconciliation, and frontend integration checks.
 
 ## Coding chat flow
 
 1. The user selects a project/workspace and sends a message with optional context
-   references. Kushex validates actor access and saves the message through
+   references. Cognition Panel validates actor access and saves the message through
    `IConversationStore.appendMessage()` with stable message/command IDs. Record a
    durable app launch intent linked to that message. The conversation store owns its
    transaction, so reconcile the two writes; do not claim a single atomic operation
    unless transaction participation is explicitly added.
-2. A Kushex dispatcher resolves that intent to stable Kushibot scope, run/session,
+2. A Cognition Panel dispatcher resolves that intent to stable Kushibot scope, run/session,
    and operation IDs. `KushibotAgentRuntime` starts registered work through the
    composed framework runtime and workflow/session facilities. Reconcile retries
    against those identities rather than starting another engine attempt blindly.
 3. Host context adapters resolve permitted files, notes, and tasks; Kushibot composes
    context and runs its session/tool/model logic. Keep the HTTP submission short.
-4. Kushex explicitly appends completed assistant responses to `IConversationStore`
+4. Cognition Panel explicitly appends completed assistant responses to `IConversationStore`
    with stable IDs and any known run/session links. Project framework diagnostics
    and lifecycle separately into SSE. Reconcile failed response persistence rather
    than assuming the session journal has saved a chat message. Do not claim token
    deltas from the non-streaming gateway.
 5. Edits use a supported isolated workspace. Create a framework proposal tied to
    its baseline/digest and display it in the chat changes card and diff view.
-6. Kushex records the authenticated user's decision. Accepted publication goes
+6. Cognition Panel records the authenticated user's decision. Accepted publication goes
    through Kushibot's coordinator with verified review/check evidence, trusted
    approval, and a real target adapter. The target enforces checkout/base revision
    checks and reports/reconciles actual effects. Record rejection without applying.
@@ -255,7 +255,7 @@ through the same integration. Browser disconnects do not cancel agent work.
 ## Integration decisions before implementation
 
 - **Dependency and version:** the inspected sibling declares package name
-  `kushibot`, version `0.0.0`. Older Kushex references to `@kushibot/core` are not
+  `kushibot`, version `0.0.0`. Older Cognition Panel references to `@kushibot/core` are not
   proof of the current package identity. Choose a reproducible local/package build
   dependency and Docker build context; the current context excludes the sibling.
 - **Framework composition:** register the actual coding workflow, executors,
@@ -268,7 +268,7 @@ through the same integration. Browser disconnects do not cancel agent work.
 - **Workspace scope:** decide selected-file SQL workspaces versus an additional
   provider for larger/other workloads. Define source checkout mounts, realpath and
   symlink boundaries, revision checks, and host publication/reconciliation behavior.
-  Existing Compose source mounts are for developing Kushex, not user repositories.
+  Existing Compose source mounts are for developing Cognition Panel, not user repositories.
 - **Identity and transport:** define actor/project authorization for HTTP, SSE,
   file sources and approvals. Framework scope isolation complements host access
   checks; the project picker is not authorization. Keep credentials server-side.

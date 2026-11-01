@@ -14,7 +14,7 @@ plugins/
 
 The server discovers packages in `KUSHEX_PLUGINS_DIR` (default: this directory).
 There is no special Local Agents plugin, automatic folder migration, or panel
-agent creation. Add agents explicitly to a package manifest, then restart Kushex.
+agent creation. Add agents explicitly to a package manifest, then restart Cognition Panel.
 The coding plugin contributes the stable agent ID `coding`, keeping
 `/agents/coding`, saved chat selections, notes and breakpoints intact.
 
@@ -58,8 +58,17 @@ export async function chat(request: {
   progress(message: string): void; // shown as steps in the chat
   /** kushibot's IScopedDebugRecorderFactory; absent when kushibot is not configured. */
   debug?: IScopedDebugRecorderFactory;
+  /** Project settings, definitions and memory loaded by the server. */
+  host?: unknown;
+  /** Set when this call answers a run that returned `presentation: "wait"`. */
+  resume?: unknown;
 }): Promise<unknown>; // a string is shown as text, anything else as JSON
 ```
+
+An agent can wait for a person across processes. It returns `presentation: "wait"` with a
+`wait` of `{ id, kind, agentRunRef, payload }`. The server saves it, the chat shows the panel
+for `kind`, and the answer starts a new process with `resume` set. See the
+[coding agent](coding/README.md#what-runs-where).
 
 ### Debug events
 
@@ -87,7 +96,7 @@ memory; the project workspace must be writable for accepted coding changes.
 
 ## Local plugins
 
-Kushex discovers `kushex-plugin.json` packages at startup from
+Cognition Panel discovers `kushex-plugin.json` packages at startup from
 `KUSHEX_PLUGINS_DIR`, an absolute directory path (default: `kushex/plugins`).
 Install a package by copying its complete folder into that directory, then restart
 the server. Remove its folder and restart to uninstall. IDs must be unique across
@@ -134,7 +143,7 @@ Agents run as local trusted code with the existing Node/tsx runner, project work
 directory, cancellation and debugger. TypeScript and Node built-ins are supported.
 The configured `KUSHEX_KUSHIBOT_DIR` provides the `kushibot` runtime import and
 editor types even outside the repository. Install any other dependencies manually
-in the plugin package (`node_modules`), using normal Node resolution; Kushex does
+in the plugin package (`node_modules`), using normal Node resolution; Cognition Panel does
 not install dependencies or expose their types in the editor. Plugins contribute
 agents only; there are no plugin pages, services, tools or lifecycle hooks.
 
@@ -154,9 +163,30 @@ runtime and theme. Only install trusted UI contributions. Keep Node imports out
 of the browser entry point.
 
 The chat composer shows the selected agent's settings. Components receive `value`,
-`onChange`, `disabled`, `agentName`, and `projectId`. Values are JSON objects, kept
+`onChange`, `disabled`, `agentName`, `projectId`, and `apiBaseUrl` for project data. Values are JSON objects, kept
 separately per agent while that project's chat panel is mounted. Switching agents
 retains their values; remounting resets them. Each message snapshots those values
 into `request.configuration` for the agent's exported `chat` function, including
 debug runs. The server limits configuration to 256 KiB; each agent must validate
 its own supported settings. Existing agents can ignore this optional field.
+
+### OpenRouter models in plugin UIs
+
+Cognition Panel exposes account-scoped model access and a searchable input from `@kushex/ui`.
+Credentials are managed in Cognition Panel Settings → OpenRouter.
+
+```tsx
+import { OpenRouterApi, OpenRouterModelInput, OpenRouterModelsContext } from "@kushex/ui";
+
+const api = new OpenRouterApi(apiBaseUrl);
+const matches = await api.models("anthropic"); // searches provider/model ID and name
+```
+
+For a controlled React field, provide the catalog with
+`<OpenRouterModelsContext.Provider value={models}>` and render
+`<OpenRouterModelInput value={value} onChange={setValue} disabled={false}
+label="Model" placeholder="Search models" />` inside it. Load the full catalog with
+`api.models()` to let the field search locally. Selection calls `onChange` with
+`openrouter:<model-id>`; the plugin saves that value in its own settings.
+`OpenRouterPanel` loads and refreshes the catalog through its `onModels` callback;
+`OpenRouterApiContext` supplies its API base URL (default `/api`).

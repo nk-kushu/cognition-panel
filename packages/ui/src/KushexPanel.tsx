@@ -1,7 +1,15 @@
 import { StyleProvider as CssInJsStyleProvider } from "@ant-design/cssinjs";
 import { App as AntApp, ConfigProvider } from "antd";
 import { StyleProvider, ThemeProvider } from "antd-style";
-import { useEffect, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from "react";
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ReactNode,
+  type Ref,
+  useMemo,
+} from "react";
 import { Provider } from "react-redux";
 import { useAppSelector } from "./app/hooks";
 import { makeStore } from "./app/store";
@@ -21,12 +29,12 @@ import {
 import { EditorFontSizeContext } from "./shared/lib/editorFontSize";
 import type { KushexPanelHandle, KushexPanelOptions } from "./types";
 
-import { AgentUiPluginsContext } from "./features/plugins/AgentConfigurationPanel";
+import { AgentApiContext, AgentUiPluginsContext } from "./features/plugins/AgentConfigurationPanel";
 
 type KushexPanelProps = KushexPanelOptions & Readonly<{ ref?: Ref<KushexPanelHandle> }>;
 
 /**
- * The Kushex panel. Store and theme are created per mounted instance, so several
+ * The Cognition Panel panel. Store and theme are created per mounted instance, so several
  * panels (or tests) on one page never share state.
  */
 export function KushexPanel({
@@ -58,6 +66,7 @@ export function KushexPanel({
   );
 
   const navigateRef = useRef<NavigateTo>(null);
+  const agentApi = useMemo(() => ({ apiBaseUrl: apiBaseUrl ?? "/api" }), [apiBaseUrl]);
   useImperativeHandle(
     ref,
     () => ({
@@ -72,9 +81,11 @@ export function KushexPanel({
       <ThemedPanel {...rest} colorMode={colorMode}>
         <PanelRouter mode={router} basename={basename} initialPath={initialPath}>
           <NavigationBridge navigateRef={navigateRef} onNavigate={onNavigate} />
-          <AgentUiPluginsContext value={agentUiPlugins}>
-            <Workbench />
-          </AgentUiPluginsContext>
+          <AgentApiContext value={agentApi}>
+            <AgentUiPluginsContext value={agentUiPlugins}>
+              <Workbench />
+            </AgentUiPluginsContext>
+          </AgentApiContext>
         </PanelRouter>
       </ThemedPanel>
     </Provider>

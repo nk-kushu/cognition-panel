@@ -1,3 +1,4 @@
+import { OpenRouterSettings } from "./OpenRouterSettings";
 import { Alert, Button, Form, Input, InputNumber, Menu, Radio, Typography } from "antd";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
@@ -18,7 +19,7 @@ import {
   settingsSaveRetried,
 } from "./settingsSlice";
 
-const sections = ["General", "Appearance", "Editor", "Project", "Agent"] as const;
+const sections = ["General", "Appearance", "Editor", "Project", "Agent", "OpenRouter"] as const;
 type Section = (typeof sections)[number];
 
 function AppearanceFields() {
@@ -129,7 +130,9 @@ export function SettingsScreen() {
         <div className="kx:p-6">
           <Typography.Title level={5}>{section}</Typography.Title>
           <Form layout="vertical" className="kx:max-w-md">
-            {section === "Appearance" ? (
+            {section === "OpenRouter" ? (
+              <OpenRouterSettings />
+            ) : section === "Appearance" ? (
               <AppearanceFields />
             ) : section === "Editor" ? (
               <EditorFields />

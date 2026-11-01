@@ -1,4 +1,5 @@
 import type {
+  AnswerAgentWaitRequest,
   DebugCommandRequest,
   EvaluateRequest,
   SetBreakpointsRequest,
@@ -12,6 +13,7 @@ import { AgentFilePath, AgentName } from "../../agents/public.js";
 import type { AgentRunDebugEvents } from "../application/AgentRunDebugEvents.js";
 import type { CodingProposals } from "../application/CodingProposals.js";
 import type { AgentRunService } from "../application/AgentRunService.js";
+import type { AgentWaits } from "../application/AgentWaits.js";
 
 /** Comments keep idle proxies (Nginx closes after 60 s) from dropping the event stream. */
 const KEEP_ALIVE_MS = 15_000;
@@ -22,6 +24,7 @@ export class AgentRunsController implements HttpController {
     private readonly contexts: RequestContextFactory,
     private readonly debugEvents: AgentRunDebugEvents | null = null,
     private readonly proposals: CodingProposals | null = null,
+    private readonly waits: AgentWaits | null = null,
   ) {}
 
   register(routes: FastifyInstance): void {
@@ -66,6 +69,62 @@ export class AgentRunsController implements HttpController {
       async (request, reply) => {
         reply.code(201).header("Cache-Control", "no-store");
         return this.runs.launch(this.contexts.create(request), request.params.id, request.body);
+      },
+    );
+    const waitParams = z.object({ projectId: z.uuid(), id: z.uuid() });
+    routes.get<{ Params: { projectId: string; id: string } }>(
+      "/projects/:projectId/agent-runs/:id/wait",
+      { schema: { params: waitParams } },
+      async (request, reply) => {
+        if (!this.waits) throw new Error("Agent waits are unavailable.");
+        reply.header("Cache-Control", "no-store");
+        return this.waits.find(
+          this.contexts.create(request),
+          request.params.projectId,
+          request.params.id,
+        );
+      },
+    );
+    routes.post<{
+      Params: { projectId: string; id: string };
+      Body: AnswerAgentWaitRequest;
+    }>(
+      "/projects/:projectId/agent-runs/:id/wait/answer",
+      {
+        schema: {
+          params: waitParams,
+          body: z
+            .object({
+              choice: z.string().max(200),
+              text: z.string().max(8000),
+              digest: z.string().max(200).optional(),
+              remember: z.string().trim().min(1).max(1000).optional(),
+            })
+            .strict(),
+        },
+      },
+      async (request, reply) => {
+        if (!this.waits) throw new Error("Agent waits are unavailable.");
+        reply.code(201).header("Cache-Control", "no-store");
+        return this.waits.answer(
+          this.contexts.create(request),
+          request.params.projectId,
+          request.params.id,
+          request.body,
+        );
+      },
+    );
+    routes.post<{ Params: { projectId: string; id: string } }>(
+      "/projects/:projectId/agent-runs/:id/wait/cancel",
+      { schema: { params: waitParams } },
+      async (request, reply) => {
+        if (!this.waits) throw new Error("Agent waits are unavailable.");
+        await this.waits.cancel(
+          this.contexts.create(request),
+          request.params.projectId,
+          request.params.id,
+        );
+        return reply.code(204).header("Cache-Control", "no-store").send();
       },
     );
     routes.get<{ Params: { projectId: string; id: string } }>(

@@ -16,6 +16,21 @@ export interface DebugEventRecorder {
 
 type Limits = Readonly<{ maxActiveRuns: number; maxKeptRuns: number }>;
 
+/** Loads what an agent needs from the database, scoped to a project the actor can access. */
+export interface AgentHostContext {
+  load(
+    context: RequestContext,
+    projectId: string,
+    agentName: string,
+    threadId: string | undefined,
+  ): Promise<unknown>;
+}
+
+/** Saves a run's request for a human when it finishes with one. */
+export interface AgentWaitRecorder {
+  capture(run: AgentRun, threadId: string | undefined): void;
+}
+
 /**
  * Starts agent runs for the project chat and keeps them in memory: runs are for trying an
  * agent out, so they do not survive a server restart. One debug run at a time, because the
@@ -38,6 +53,11 @@ export class AgentRunService implements ManagedResource {
     private readonly codingProposals: Readonly<{
       create(context: RequestContext, projectId: string, runId: string): Promise<unknown>;
     }> | null = null,
+    private readonly hostContext: AgentHostContext | null = null,
+    private readonly waits: AgentWaitRecorder | null = null,
+    private readonly credentials: {
+      credentials(context: RequestContext): Promise<Record<string, string>>;
+    } | null = null,
   ) {
     this.limits = { maxActiveRuns: 4, maxKeptRuns: 50, ...limits };
   }
@@ -46,6 +66,8 @@ export class AgentRunService implements ManagedResource {
     context: RequestContext,
     projectId: string,
     request: StartAgentRunRequest,
+    /** Set when this launch answers a waiting run instead of starting a new one. */
+    resume?: unknown,
   ): Promise<AgentRunDto> {
     const { workspace } = await this.workspaces.forProject(context, projectId);
     const checkout = await this.paths.resolve(workspace.path);
@@ -55,7 +77,16 @@ export class AgentRunService implements ManagedResource {
       throw new ConflictError("Too many agent runs are in progress; stop one first.");
     if (request.debug && active.some((run) => run.debug))
       throw new ConflictError("A debug session is already running; stop it first.");
+    const host = await this.hostContext?.load(
+      context,
+      projectId,
+      request.agentName,
+      request.threadId,
+    );
+    const credentials =
+      request.agentName === "coding" ? await this.credentials?.credentials(context) : undefined;
     const run = new AgentRun(context.actor.id, projectId, request.agentName, request.debug);
+    this.waits?.capture(run, request.threadId);
     if (request.threadId) {
       if (!this.threads) throw new ConflictError("Chat thread storage is unavailable.");
       await this.threads.record(
@@ -80,6 +111,9 @@ export class AgentRunService implements ManagedResource {
       message: request.message,
       files: request.files,
       configuration: request.configuration ?? {},
+      ...(credentials ? { credentials } : {}),
+      ...(host === undefined ? {} : { host }),
+      ...(resume === undefined ? {} : { resume }),
       breakpoints: request.breakpoints ?? {},
       recordDebugEvent: (event) => this.debugEvents?.record(run, event),
     });

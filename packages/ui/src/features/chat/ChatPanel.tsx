@@ -53,6 +53,7 @@ import { PaneHeader } from "../workbench/PaneHeader";
 import { selectProjectId } from "../workbench/workbenchSlice";
 import { Markdown } from "../../shared/components/Markdown";
 import { AttachFilesDialog } from "./AttachFilesDialog";
+import { AgentWaitPanel, isWaitResult } from "./AgentWaitPanel";
 import { CodingChangeReview, codingResultPreview } from "./CodingChangeReview";
 
 import { AgentConfigurationPanel } from "../plugins/AgentConfigurationPanel";
@@ -592,7 +593,9 @@ function RunMessage({ runId }: Readonly<{ runId: string }>) {
             }
           />
         )}
-        {coding ? (
+        {run.result && isWaitResult(run.result.value) ? (
+          <AgentWaitPanel projectId={run.projectId} runId={run.id} />
+        ) : coding ? (
           <CodingChangeReview
             projectId={run.projectId}
             runId={run.id}

@@ -1,3 +1,6 @@
+import { SecretCipher } from "../modules/openrouter/SecretCipher.js";
+import { OpenRouterService } from "../modules/openrouter/OpenRouterService.js";
+import { OpenRouterController } from "../modules/openrouter/OpenRouterController.js";
 import { LocalWorkspaceProposalService, LocalWorkspacePublicationService } from "kushibot";
 import { PluginCatalog } from "../modules/plugins/PluginCatalog.js";
 import { PluginsController } from "../modules/plugins/PluginsController.js";
@@ -29,7 +32,14 @@ import {
   PrismaCodeNotesRepository,
 } from "../modules/agents/public.js";
 import {
+  AgentConfigController,
+  AgentConfigService,
+  ProjectMemoryController,
+  ProjectMemoryService,
+} from "../modules/agent-config/public.js";
+import {
   AgentRunDebugEvents,
+  AgentWaits,
   CodingProposals,
   AgentRunService,
   AgentRunsController,
@@ -130,6 +140,14 @@ export class ApplicationFactory {
       proposals,
       publication,
     );
+    const memory = new ProjectMemoryService(kushibotDatabase, projects);
+    const agentConfig = new AgentConfigService(database.client, projects, memory, threads);
+    const openrouter = new OpenRouterService(
+      database.client,
+      new SecretCipher(process.env.KUSHEX_CREDENTIAL_ENCRYPTION_KEY),
+      fetch,
+    );
+    const waits = new AgentWaits(database.client, projects, memory, this.logger);
     const runs = new AgentRunService(
       workspaces,
       workspacePaths,
@@ -139,13 +157,18 @@ export class ApplicationFactory {
       {},
       threads,
       codingProposals,
+      agentConfig,
+      waits,
+      openrouter,
     );
+    waits.attach(runs);
     const http = new HttpServer(
       this.config.http,
       this.logger,
       new ErrorResponder(this.logger),
       [
         new HealthController(readiness),
+        new OpenRouterController(openrouter, contexts),
         new SettingsController(
           new SettingsService(new PrismaSettingsRepository(database.client)),
           contexts,
@@ -160,7 +183,9 @@ export class ApplicationFactory {
         new CodeNotesController(
           new CodeNotesService(new PrismaCodeNotesRepository(database.client), agents),
         ),
-        new AgentRunsController(runs, contexts, debugEvents, codingProposals),
+        new AgentRunsController(runs, contexts, debugEvents, codingProposals, waits),
+        new AgentConfigController(agentConfig, contexts),
+        new ProjectMemoryController(memory, contexts),
       ],
       new LocalRequestGuard(this.config.allowedOrigins),
     );

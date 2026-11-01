@@ -1,5 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type {
+  AgentWaitDto,
+  AnswerAgentWaitRequest,
   PluginDto,
   AgentCodeNotesDto,
   ChatThreadDto,
@@ -38,6 +40,14 @@ import type {
 } from "@kushex/contracts";
 import type { StoreOptions } from "../../app/storeOptions";
 
+export type OpenRouterStatus = Readonly<{ configured: boolean; updatedAt: string | null }>;
+export type OpenRouterCatalogModel = Readonly<{
+  id: string;
+  name: string;
+  contextTokens: number;
+  maxOutputTokens: number;
+}>;
+
 /** Each panel's store owns its cache and transport configuration. */
 export const kushexApi = createApi({
   reducerPath: "kushexApi",
@@ -52,6 +62,7 @@ export const kushexApi = createApi({
     })(args, api, extraOptions);
   },
   tagTypes: [
+    "OpenRouter",
     "Projects",
     "Agents",
     "AgentFiles",
@@ -63,6 +74,22 @@ export const kushexApi = createApi({
   ],
   keepUnusedDataFor: 0,
   endpoints: (build) => ({
+    openRouterStatus: build.query<OpenRouterStatus, void>({
+      query: () => "/integrations/openrouter",
+      providesTags: ["OpenRouter"],
+    }),
+    saveOpenRouterKey: build.mutation<OpenRouterStatus, string>({
+      query: (apiKey) => ({ url: "/integrations/openrouter", method: "PUT", body: { apiKey } }),
+      invalidatesTags: ["OpenRouter"],
+    }),
+    removeOpenRouterKey: build.mutation<OpenRouterStatus, void>({
+      query: () => ({ url: "/integrations/openrouter", method: "DELETE", body: {} }),
+      invalidatesTags: ["OpenRouter"],
+    }),
+    openRouterModels: build.query<readonly OpenRouterCatalogModel[], void>({
+      query: () => "/integrations/openrouter/models",
+      providesTags: ["OpenRouter"],
+    }),
     chatThreads: build.query<readonly ChatThreadDto[], string>({
       query: (projectId) => `/projects/${encodeURIComponent(projectId)}/chat-threads`,
       providesTags: ["ChatThreads"],
@@ -242,6 +269,27 @@ export const kushexApi = createApi({
         body,
       }),
     }),
+    agentWait: build.query<AgentWaitDto, { projectId: string; runId: string }>({
+      query: ({ projectId, runId }) =>
+        `/projects/${encodeURIComponent(projectId)}/agent-runs/${encodeURIComponent(runId)}/wait`,
+    }),
+    answerAgentWait: build.mutation<
+      AgentRunDto,
+      { projectId: string; runId: string; answer: AnswerAgentWaitRequest }
+    >({
+      query: ({ projectId, runId, answer }) => ({
+        url: `/projects/${encodeURIComponent(projectId)}/agent-runs/${encodeURIComponent(runId)}/wait/answer`,
+        method: "POST",
+        body: answer,
+      }),
+    }),
+    cancelAgentWait: build.mutation<void, { projectId: string; runId: string }>({
+      query: ({ projectId, runId }) => ({
+        url: `/projects/${encodeURIComponent(projectId)}/agent-runs/${encodeURIComponent(runId)}/wait/cancel`,
+        method: "POST",
+        body: {},
+      }),
+    }),
     codingProposalReview: build.query<
       CodingProposalReviewDto,
       { projectId: string; runId: string }
@@ -352,6 +400,10 @@ export const kushexApi = createApi({
   }),
 });
 export const {
+  useOpenRouterStatusQuery,
+  useSaveOpenRouterKeyMutation,
+  useRemoveOpenRouterKeyMutation,
+  useLazyOpenRouterModelsQuery,
   useChatThreadsQuery,
   useLazyChatThreadQuery,
   useCreateChatThreadMutation,
@@ -379,6 +431,9 @@ export const {
   useKushibotTypesQuery,
   useNodeTypesQuery,
   useStartAgentRunMutation,
+  useAgentWaitQuery,
+  useAnswerAgentWaitMutation,
+  useCancelAgentWaitMutation,
   useCodingProposalReviewQuery,
   useLazyCodingProposalReviewQuery,
   useCreateCodingProposalMutation,

@@ -1,7 +1,7 @@
 {
   "name": "@kushex/embed",
   "version": "0.0.0",
-  "description": "Mount the Kushex harness panel into any web page: mountKushex(el, options).",
+  "description": "Mount the Cognition Panel harness panel into any web page: mountKushex(el, options).",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

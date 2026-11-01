@@ -10,7 +10,13 @@ const isExternal = (id: string) =>
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  resolve: { dedupe: ["react", "react-dom", "antd"] },
+  resolve: {
+    dedupe: ["react", "react-dom", "antd"],
+    alias: {
+      "@kushex/ui": new URL("./src/index.ts", import.meta.url).pathname,
+      "@kushex/workflow-ui": new URL("../workflow-ui/src/index.ts", import.meta.url).pathname,
+    },
+  },
   build: {
     lib: {
       entry: "src/index.ts",

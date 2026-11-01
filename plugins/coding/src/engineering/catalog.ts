@@ -1,5 +1,18 @@
 // Portable snapshot of Atlas harness defaults. Browser-safe; no Atlas runtime dependency.
-import type { CodingEngineeringDefinition } from "./types";
+// The UI offers these as starting definitions; only what a project saves is ever used.
+export type SelectionMode = "auto" | "required" | "off";
+type CodingEngineeringDefinition = Readonly<{
+  id: string;
+  label: string;
+  description: string;
+  reviewInstructions: string;
+  advisory: boolean;
+  guardMode: SelectionMode;
+  skillMode: SelectionMode;
+  skillInstructions: string;
+  skillQuestion: string;
+  guardQuestion: string;
+}>;
 
 export const codingEngineeringCatalog: readonly CodingEngineeringDefinition[] = [
   {

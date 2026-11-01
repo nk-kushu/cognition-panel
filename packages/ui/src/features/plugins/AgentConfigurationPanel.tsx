@@ -5,14 +5,16 @@ import type { AgentSummaryDto } from "@kushex/contracts";
 import type { AgentConfigurationProps, AgentUiPlugin } from "../../types";
 
 export const AgentUiPluginsContext = createContext<readonly AgentUiPlugin[]>([]);
+export const AgentApiContext = createContext({ apiBaseUrl: "/api" });
 
 /** Resolves both owner and agent ID so unrelated plugins cannot claim an agent's panel. */
 export function AgentConfigurationPanel({
   agent,
   ...props
-}: Omit<AgentConfigurationProps, "agentName"> & { agent: AgentSummaryDto }) {
+}: Omit<AgentConfigurationProps, "agentName" | "apiBaseUrl"> & { agent: AgentSummaryDto }) {
   const [open, setOpen] = useState(false);
   const plugins = useContext(AgentUiPluginsContext);
+  const { apiBaseUrl } = useContext(AgentApiContext);
   const Configuration = plugins.find((plugin) => plugin.id === agent.plugin?.id)?.agents[
     agent.name
   ];
@@ -47,7 +49,7 @@ export function AgentConfigurationPanel({
         }}
       >
         <ConfigurationBoundary>
-          <Configuration {...props} agentName={agent.name} />
+          <Configuration {...props} agentName={agent.name} apiBaseUrl={apiBaseUrl} />
         </ConfigurationBoundary>
       </Modal>
     </>
