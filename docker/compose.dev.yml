@@ -19,6 +19,8 @@ services:
     environment:
       NODE_ENV: development
       API_PROXY_TARGET: http://backend:3000
+      # Editor links must point at the host checkout rather than /app in Docker.
+      VITE_LOCATOR_PROJECT_PATH: ${LOCATOR_PROJECT_PATH:-}
       # Polling makes source edits reliable across Docker Desktop bind mounts.
       CHOKIDAR_USEPOLLING: "true"
     volumes:
@@ -27,6 +29,7 @@ services:
       - ../apps/standalone/vite.config.ts:/app/apps/standalone/vite.config.ts
       - ../plugins:/app/plugins:ro
       - ../packages/ui/src:/app/packages/ui/src
+      - ../packages/workflow-ui/src:/app/packages/workflow-ui/src
       - ../packages/contracts/src:/app/packages/contracts/src
 
   migrate:

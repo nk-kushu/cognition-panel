@@ -20,6 +20,25 @@ pnpm build            # @kushex/ui (ESM + style.css + .d.ts), @kushex/embed (ESM
 
 ## Docker
 
+### Locate UI components
+
+LocatorJS is enabled by `pnpm dev`. Hold **Option** (macOS) or **Alt** and click
+a component to open its source in your editor. The Locator toolbar lets you
+choose your editor and inspect parent components. It covers the panel, workflow UI,
+and plugin UI sources. Production builds omit the Locator UI and source markers.
+
+For Docker development, set the host checkout path so editor links open local files:
+
+```sh
+LOCATOR_PROJECT_PATH="$PWD" docker compose \
+  -f docker/compose.standalone.yml -f docker/compose.dev.yml \
+  up -d --no-deps --build frontend
+```
+
+Then open `http://localhost:3050`. This command uses the existing backend and database.
+To return to the production frontend, run
+`docker compose -f docker/compose.standalone.yml up -d --no-deps --build frontend`.
+
 The backend imports Kushibot as a normal package dependency (`file:../kushibot`
 from the repository root). Build the sibling library before installing dependencies
 or building Docker images:
