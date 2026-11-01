@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import type { WorkflowSelection } from "../types";
 import { useSettingsSchema } from "./SettingsSchemaContext";
 import { LimitField, ModelField } from "./settingsFields";
-export type ConfigurationTab = "models" | "tests" | "skills" | "guards";
+export type ConfigurationTab = "tests" | "skills" | "guards";
 
 type InspectorProps = Readonly<{
   api: AgentSettingsApi;

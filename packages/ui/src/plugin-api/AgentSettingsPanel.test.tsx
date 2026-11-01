@@ -1,14 +1,15 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import {
   AgentSettingsPanel,
-  useAgentDefinitions,
-  useAgentSettings,
+  AgentSettingsHost,
   type AgentSettingsSchema,
   type AgentSettingsApi,
   type AgentSettings,
 } from "@kushex/workflow-ui";
+
+afterEach(() => vi.unstubAllGlobals());
 
 const defaults: AgentSettings = {
   limits: { budget: 4 },
@@ -50,61 +51,164 @@ const schema: AgentSettingsSchema = {
   builtInDefinitions: { skill: [], guard: [] },
 };
 
-it("renders the full settings UI for another agent and shares custom field edits between graph and tabs", async () => {
+it("renders the settings UI without a Limits tab and saves limits through the workflow inspector", async () => {
   const saveSettings = vi.fn<AgentSettingsApi["saveSettings"]>(async (settings) => ({
     settings,
     revision: 8,
   }));
-  const api: AgentSettingsApi = {
-    settings: async () => ({ settings: {}, revision: 7 }),
-    saveSettings,
-    definitions: async () => [],
-    createDefinition: vi.fn(),
-    saveDefinition: vi.fn(),
-    deleteDefinition: vi.fn(),
-    memory: async () => [],
-    addMemory: vi.fn(),
-    updateMemory: vi.fn(),
-    deleteMemory: vi.fn(),
-  };
-  function Editor() {
-    const store = useAgentSettings(api, defaults);
-    const definitions = useAgentDefinitions(api);
-    return (
-      <AgentSettingsPanel
-        schema={schema}
-        graph={{
-          id: "editorial",
-          title: "Editorial workflow",
-          nodes: [{ id: "draft", title: "Draft article" }],
-          edges: [],
-        }}
-        api={api}
-        store={store}
-        definitions={definitions}
-        disabled={false}
-        apiBaseUrl="/editorial-api"
-        requestMode="article"
-        onRequestModeChange={() => {}}
-      />
-    );
-  }
+  const createDefinition = vi.fn();
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith("/settings")) {
+      if (init?.method === "PUT") {
+        const body = JSON.parse(String(init.body));
+        return Response.json(await saveSettings(body.settings, body.baseRevision));
+      }
+      return Response.json({ settings: {}, revision: 7 });
+    }
+    if (url.endsWith("/definitions")) {
+      if (init?.method === "POST") {
+        const body = JSON.parse(String(init.body));
+        createDefinition(body.kind, body.content);
+        return Response.json({ id: "new", ...body });
+      }
+      return Response.json([]);
+    }
+    return Response.json([]);
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const config = JSON.parse(
+    JSON.stringify({
+      agentId: "editorial",
+      schema,
+      defaults,
+      graph: {
+        id: "editorial",
+        title: "Editorial workflow",
+        nodes: [{ id: "draft", title: "Draft article" }],
+        edges: [],
+      },
+    }),
+  );
   const user = userEvent.setup();
-  render(<Editor />);
+  render(
+    <AgentSettingsPanel
+      config={{ ...config, projectId: "project /1", apiBaseUrl: "/editorial-api" }}
+    />,
+  );
   await user.click(await screen.findByRole("button", { name: "Draft article" }));
   expect(screen.getByLabelText("Author model")).toBeVisible();
+  expect(fetchMock).toHaveBeenCalledWith(
+    "/editorial-api/projects/project%20%2F1/agents/editorial/settings",
+    expect.objectContaining({ method: "GET" }),
+  );
   const budget = screen.getByLabelText("Article budget");
   await user.tripleClick(budget);
   await user.keyboard("9");
-  await user.click(screen.getByRole("tab", { name: "Limits" }));
-  const limits = within(screen.getByRole("tabpanel", { name: "Limits" }));
-  expect(limits.getByLabelText("Article budget")).toHaveValue("9");
-  await user.click(limits.getByRole("button", { name: "Save" }));
+  expect(screen.queryByRole("tab", { name: "Limits" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("tab", { name: "Models" })).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Save" }));
   expect(saveSettings).toHaveBeenCalledWith(expect.objectContaining({ limits: { budget: 9 } }), 7);
   await user.click(screen.getByRole("tab", { name: "Skills" }));
+  expect(screen.queryByRole("button", { name: "Add built-in skills" })).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Add skill" }));
-  expect(api.createDefinition).toHaveBeenCalledWith("skill", schema.newDefinitions.skill);
-  for (const name of ["Workflow", "Limits", "Models", "Tests", "Skills", "Guards", "Memory"]) {
+  expect(createDefinition).toHaveBeenCalledWith("skill", schema.newDefinitions.skill);
+  await user.click(screen.getByRole("tab", { name: "Guards" }));
+  expect(screen.queryByRole("button", { name: "Add built-in guards" })).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Add guard" }));
+  expect(createDefinition).toHaveBeenCalledWith("guard", schema.newDefinitions.guard);
+  for (const name of ["Workflow", "Tests", "Skills", "Guards", "Memory"]) {
     expect(screen.getByRole("tab", { name })).toBeVisible();
   }
 });
+
+it("connects request mode to the host while preserving other message options", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ settings: {}, revision: 1 })),
+  );
+  const onChange = vi.fn();
+  const user = userEvent.setup();
+  render(
+    <AgentSettingsHost
+      config={{
+        agentId: "editorial",
+        schema,
+        defaults,
+        graph: { id: "editorial", title: "Editorial", nodes: [], edges: [] },
+      }}
+      projectId="p1"
+      apiBaseUrl="/api"
+      disabled={false}
+      value={{ mode: "", note: "Keep this" }}
+      onChange={onChange}
+    />,
+  );
+  await user.click(screen.getByRole("combobox", { name: "Request mode" }));
+  await user.click(screen.getByText("Write article"));
+  expect(onChange).toHaveBeenCalledWith({ mode: "article", note: "Keep this" });
+});
+
+it.each(["skill", "guard"] as const)(
+  "deletes a collapsed %s after confirmation and reloads the list",
+  async (kind) => {
+    let items = [
+      {
+        id: "definition /1",
+        version: 1,
+        versionId: "v1",
+        kind,
+        enabled: true,
+        content: { ...schema.newDefinitions[kind], name: "Project convention" },
+      },
+    ];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method === "DELETE") {
+        items = [];
+        return new Response(null, { status: 204 });
+      }
+      if (url.endsWith("/definitions")) return Response.json(items);
+      if (url.endsWith("/settings")) return Response.json({ settings: {}, revision: 1 });
+      return Response.json([]);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(
+      <AgentSettingsPanel
+        config={{
+          agentId: "editorial",
+          schema,
+          defaults,
+          projectId: "p1",
+          apiBaseUrl: "/api",
+          graph: { id: "editorial", title: "Editorial", nodes: [], edges: [] },
+        }}
+      />,
+    );
+    await user.click(screen.getByRole("tab", { name: kind === "skill" ? "Skills" : "Guards" }));
+    const remove = await screen.findByRole("button", {
+      name: `Delete ${kind}: Project convention`,
+    });
+    await user.click(remove);
+    expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
+    await user.click(remove);
+    await user.click(screen.getByRole("button", { name: "Delete", exact: true }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: `Delete ${kind}: Project convention` }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/agents/editorial/definitions/definition%20%2F1",
+      expect.objectContaining({
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }),
+    );
+    expect(screen.getByText("None saved for this project.")).toBeVisible();
+  },
+);

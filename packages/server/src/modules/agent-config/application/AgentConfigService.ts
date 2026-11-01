@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import type {
   AgentConfiguration,
   AgentDefinitionDto,
@@ -29,13 +30,17 @@ const CONTENT: Readonly<Record<AgentDefinitionKind, z.ZodType>> = {
 };
 const MAX_DEFINITIONS = 128;
 
-/** Settings, skills and guards, always scoped by Kushex project ID and agent type. */
+/**
+ * PostgreSQL settings, skills and guards scoped by authorized project and plugin agent type.
+ * Workspace.projectId is unique: each project owns exactly one workspace, so project scope
+ * also isolates workspace data without storing a second, potentially conflicting workspace ID.
+ */
 export class AgentConfigService implements AgentHostContext {
   constructor(
     private readonly db: PrismaClient,
     private readonly projects: ProjectService,
-    private readonly memory: ProjectMemoryService,
-    private readonly threads: ChatThreads,
+    private readonly memory: Pick<ProjectMemoryService, "recall">,
+    private readonly threads: Pick<ChatThreads, "conversation">,
   ) {}
 
   async settings(
@@ -145,7 +150,7 @@ export class AgentConfigService implements AgentHostContext {
       data: {
         enabled: request.enabled,
         // An unchanged definition keeps its version, so toggling does not fork history.
-        ...(JSON.stringify(content) === JSON.stringify(current.content)
+        ...(isDeepStrictEqual(content, current.content)
           ? {}
           : { versions: { create: { version: current.version + 1, content } } }),
       },

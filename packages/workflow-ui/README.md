@@ -70,57 +70,43 @@ pass those directly.
 ## Complete agent settings panel
 
 `AgentSettingsPanel` owns the entire configuration view: request mode, Workflow,
-Limits, Models, Tests, Skills, Guards, Memory, workflow inspection, and save/error
+Tests, Skills, Guards, Memory, workflow inspection, and save/error
 feedback. All React editors live in this package.
 
 ```tsx
-import {
-  AgentSettingsPanel,
-  useAgentSettings,
-  useAgentDefinitions,
-  type AgentSettingsSchema,
-  type AgentSettingsApi,
-} from "@kushex/workflow-ui";
+import { AgentSettingsPanel, AgentSettingsHost } from "@kushex/workflow-ui";
 
-// Keep the API object and defaults stable across renders.
-const store = useAgentSettings(api, defaults);
-const definitions = useAgentDefinitions(api);
+// config contains only JSON data, including the current project/API address.
+<AgentSettingsPanel config={{ ...agentConfig, projectId, apiBaseUrl: "/api" }} />;
 
-<AgentSettingsPanel
-  schema={schema}
-  graph={graph}
-  api={api}
-  store={store}
-  definitions={definitions}
-  disabled={false}
+// For a host with controlled next-message options, the shared adapter connects events.
+<AgentSettingsHost
+  config={agentConfig}
+  projectId={projectId}
   apiBaseUrl="/api"
-  requestMode={mode}
-  onRequestModeChange={setMode}
+  disabled={false}
+  value={messageOptions}
+  onChange={setMessageOptions}
 />;
 ```
 
-`AgentSettingsSchema` is serializable data describing limit/model fields, request
-modes, step configuration, return routes, skill/guard phases, required inputs, and
-blank/built-in definitions. Limits, model keys and phase IDs are supplied by the
-agent. `AgentSettingsApi` is a structural interface for settings, definitions and
-memory persistence; no endpoint or agent name is fixed in the library.
+`AgentSettingsConfiguration` contains `agentId`, `schema`, `defaults`, and a graph
+with optional layout coordinates. `edgeLimits` maps edge IDs to limit keys;
+`nodeDetails` maps node IDs to a fixed worker label or the count sources `guards`
+and `tests`. `SettingsWorkflowGraph` resolves model choices, enabled suites,
+skill/guard attachments, return limits, and counts from the current draft.
 
-The settings hooks are optional: a host can supply controlled stores instead.
-`AgentSettingsStore` provides the draft, dirty state, notices, update and save;
-`AgentDefinitionsStore` provides definitions and change/reload behavior. All tabs
-and the workflow inspector share the same draft and revision. Saved definition
-changes are reflected throughout the panel.
+The panel owns HTTP persistence, loading, drafts, revisions, definitions, memory,
+and OpenRouter integration. Its only prop is `config`; no clients, stores, hooks,
+React nodes, or callbacks are passed to it. API requests use
+`/projects/:projectId/agents/:agentId/{settings,definitions}` and project `/memory`.
+`apiBaseUrl` supplies the prefix. `AgentSettingsHost` bridges the surrounding app's
+controlled request-mode events through context while keeping the panel input JSON.
 
-For graph-only uses, `WorkflowPanel` remains available. Use its optional
-`selection` / `onSelect` for controlled selection and `showDetails={false}` when
-the host supplies another inspector.
-
-The coding plugin's `ui.tsx` is a thin adapter. `ui/settingsSchema.ts` supplies its
-configuration, `ui/codingWorkflowGraph.ts` creates graph JSON from its step
-catalog/settings/definitions, and `ui/api.ts` implements persistence. Logical graph
-lanes show active branches; the runtime chain also completes inactive steps without
-work. The library imports no coding plugin or server code. OpenRouter components
-also live here and remain re-exported by `@kushex/ui` for compatibility.
+The coding plugin's `ui/settings.json` supplies its complete configuration and
+curated graph layout. `ui.tsx` only connects it to the shared host adapter. Runtime
+workflow execution remains in the coding plugin. The library imports no coding
+plugin or server code. `WorkflowPanel` remains available for graph-only uses.
 
 Build/typecheck: `pnpm --filter @kushex/workflow-ui build` and
 `pnpm --filter @kushex/workflow-ui typecheck`.

@@ -60,18 +60,6 @@ export function DefinitionsPanel({
         >
           Add {kind}
         </Button>
-        <Button
-          disabled={disabled}
-          onClick={() =>
-            void change(async () => {
-              const names = new Set<unknown>(own.map((item) => item.content.name));
-              for (const content of schema.builtInDefinitions[kind])
-                if (!names.has(content.name)) await api.createDefinition(kind, content);
-            })
-          }
-        >
-          Add built-in {kind}s
-        </Button>
       </Space>
       {own.length === 0 && (
         <Typography.Text type="secondary">None saved for this project.</Typography.Text>
@@ -86,6 +74,31 @@ export function DefinitionsPanel({
               {!item.enabled && <Tag>disabled</Tag>}
             </Space>
           ),
+          extra: (
+            <Popconfirm
+              title={`Delete this ${kind}?`}
+              description="Past runs keep the version they used."
+              disabled={disabled}
+              okText="Delete"
+              cancelText="Cancel"
+              onConfirm={(event) => {
+                event?.stopPropagation();
+                return change(() => api.deleteDefinition(item.id));
+              }}
+              onCancel={(event) => event?.stopPropagation()}
+            >
+              <Button
+                danger
+                size="small"
+                disabled={disabled}
+                aria-label={`Delete ${kind}: ${String(item.content.name)}`}
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+              >
+                Delete
+              </Button>
+            </Popconfirm>
+          ),
           children: (
             <Editor
               key={item.versionId}
@@ -95,7 +108,6 @@ export function DefinitionsPanel({
               onSave={(enabled, content) =>
                 change(() => api.saveDefinition(item.id, enabled, content))
               }
-              onDelete={() => change(() => api.deleteDefinition(item.id))}
             />
           ),
         }))}
@@ -109,13 +121,11 @@ function Editor({
   others,
   disabled,
   onSave,
-  onDelete,
 }: Readonly<{
   item: AgentDefinitionDto;
   others: readonly { value: string; label: string }[];
   disabled: boolean;
   onSave: (enabled: boolean, content: Content) => Promise<void>;
-  onDelete: () => Promise<void>;
 }>) {
   const {
     skillPhases: PHASES,
@@ -336,15 +346,6 @@ function Editor({
         <Button type="primary" disabled={disabled} onClick={() => void onSave(enabled, content)}>
           Save
         </Button>
-        <Popconfirm
-          title="Delete this definition?"
-          description="Past runs keep the version they used."
-          onConfirm={() => void onDelete()}
-        >
-          <Button danger disabled={disabled}>
-            Delete
-          </Button>
-        </Popconfirm>
       </Space>
     </Space>
   );

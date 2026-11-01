@@ -15,12 +15,50 @@ const shared: ThemeConfig["token"] = {
   fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
 };
 
+// VS Code Monokai's charcoal surfaces, warm foreground, and syntax accents.
+const monokai: ThemeConfig["token"] = {
+  colorPrimary: "#a6e22e",
+  colorInfo: "#66d9ef",
+  colorSuccess: "#a6e22e",
+  colorWarning: "#e6db74",
+  colorError: "#f92672",
+  colorBgBase: "#272822",
+  colorBgLayout: "#1e1f1c",
+  colorBgContainer: "#272822",
+  colorBgElevated: "#34352f",
+  colorBgSpotlight: "#414339",
+  colorTextBase: "#f8f8f2",
+  colorText: "#f8f8f2",
+  colorTextSecondary: "#c2c2b5",
+  colorTextTertiary: "#a6a596",
+  colorTextQuaternary: "#88846f",
+  colorBorder: "#414339",
+  colorBorderSecondary: "#3e3d32",
+  colorFill: "#75715e66",
+  colorFillSecondary: "#75715e4d",
+  colorFillTertiary: "#75715e33",
+  colorFillQuaternary: "#75715e1f",
+};
+
 /**
  * Theme without an algorithm: antd-style's ThemeProvider prepends the light or dark
  * algorithm for the resolved appearance, so setting one here would apply it twice.
  */
 export const getAntdTheme: GetAntdThemeConfig = (appearance) => ({
-  token: shared,
+  token: appearance === "dark" ? { ...shared, ...monokai } : shared,
+  ...(appearance === "dark"
+    ? {
+        components: {
+          Button: { primaryColor: "#1e1f1c" },
+          Tree: {
+            directoryNodeSelectedBg: "#414339",
+            directoryNodeSelectedColor: "#f8f8f2",
+            nodeSelectedBg: "#414339",
+            nodeSelectedColor: "#f8f8f2",
+          },
+        },
+      }
+    : {}),
   cssVar: { prefix: ANTD_CSS_VAR_PREFIX, key: `kushex-${appearance}` },
 });
 

@@ -3,6 +3,7 @@ import { Spin } from "antd";
 import { useThemeMode } from "antd-style";
 import type { editor } from "monaco-editor";
 import { useEditorFontSize } from "../lib/editorFontSize";
+import { MONOKAI_THEME, registerMonokaiTheme } from "./monokaiTheme";
 
 const LANGUAGE_BY_EXTENSION: Record<string, string> = {
   ts: "typescript",
@@ -76,10 +77,13 @@ export function CodeEditor({
         path={path}
         language={language ?? (path ? languageForPath(path) : "plaintext")}
         value={value}
-        theme={isDarkMode ? "vs-dark" : "light"}
+        theme={isDarkMode ? MONOKAI_THEME : "light"}
         loading={<Spin aria-label="Loading editor" />}
         onChange={handleChange}
-        beforeMount={beforeMount}
+        beforeMount={(monaco) => {
+          registerMonokaiTheme(monaco);
+          beforeMount?.(monaco);
+        }}
         keepCurrentModel={keepCurrentModel}
         onMount={onMount}
         options={{

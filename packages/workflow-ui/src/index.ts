@@ -33,3 +33,7 @@ export {
 } from "./OpenRouter";
 
 export type { ProjectMemory, TestSuite, SettingsNotice } from "./settings/types";
+
+export { AgentSettingsHost } from "./settings/AgentSettingsHost";
+export { SettingsWorkflowGraph } from "./settings/SettingsWorkflowGraph";
+export type { AgentSettingsConfiguration } from "./settings/types";

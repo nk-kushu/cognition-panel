@@ -1,5 +1,6 @@
 import { defaultCodingSettings } from "../../../../plugins/coding/src/engineering/types";
-import { codingWorkflowGraph } from "../../../../plugins/coding/ui/codingWorkflowGraph";
+import codingConfig from "../../../../plugins/coding/ui/settings.json";
+import { SettingsWorkflowGraph, type AgentSettingsConfiguration } from "@kushex/workflow-ui";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it } from "vitest";
@@ -122,7 +123,10 @@ it("adapts Kushibot definitions, preserving dependencies, policy versions, and t
 });
 
 it("keeps the coding graph compact with non-overlapping cards and separate return paths", () => {
-  const coding = codingWorkflowGraph(defaultCodingSettings, []);
+  const coding = new SettingsWorkflowGraph(codingConfig as AgentSettingsConfiguration).build(
+    defaultCodingSettings,
+    [],
+  );
   const layout = new WorkflowLayout(coding);
   expect(layout.errors).toEqual([]);
   expect(layout.width).toBeLessThanOrEqual(528);

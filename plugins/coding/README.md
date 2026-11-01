@@ -115,8 +115,10 @@ Open **Configure** in the chat for the rest. All of it is saved per project and 
 - **Tests**: the test-writing prompt, test types, and the suites that run them. With no type
   selected, tests are written but not run, and the result says so. A selected type with no
   enabled suite stops a code change as blocked verification before tests are written.
-- **Skills** and **Guards**: created in the UI and versioned. _Add built-in_ copies the starter
-  catalog into the project. A skill with an empty expected result is short guidance sent with
+- **Skills** and **Guards**: created in the UI and versioned in PostgreSQL, scoped to the
+  project, its workspace, and the plugin agent type. Use **Add skill** or **Add guard**
+  to create a definition for this project.
+  A skill with an empty expected result is short guidance sent with
   its phase's assignments; one with an expected result gets its own scheduled session.
   A skill runs once in each of its phases, can require run results (`findings`, `plan`, `tests`,
   `skeleton`, `approval`), and its result is checked against the expected result. The `answer`

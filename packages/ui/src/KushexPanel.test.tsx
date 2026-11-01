@@ -23,6 +23,9 @@ describe("KushexPanel", () => {
 
     await waitFor(() => expect(root).toHaveClass("kx-dark"));
     expect(root.style.getPropertyValue("--kx-ant-color-bg-container")).not.toBe(lightBg);
+    expect(root.style.getPropertyValue("--kx-ant-color-bg-container")).toBe("#272822");
+    expect(root.style.getPropertyValue("--kx-ant-color-bg-layout")).toBe("#1e1f1c");
+    expect(root.style.getPropertyValue("--kx-ant-color-primary")).toBe("#90c32a");
     await waitFor(() =>
       expect(
         fetch.mock.calls.some(([input]) => input instanceof Request && input.method === "PATCH"),

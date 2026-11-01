@@ -86,22 +86,32 @@ export type AgentSettingsSchema = Readonly<{
   skillPhases: readonly Readonly<{ value: string; label?: string }>[];
   guardPhases: readonly Readonly<{ value: string; label?: string }>[];
   skillInputs: readonly Readonly<{ value: string; label?: string }>[];
-  newDefinitions: Readonly<Record<"skill" | "guard", Readonly<Record<string, unknown>>>>;
+  newDefinitions: Readonly<Record<"skill" | "guard", Readonly<Record<string, JsonValue>>>>;
   builtInDefinitions: Readonly<
-    Record<"skill" | "guard", readonly Readonly<Record<string, unknown>>[]>
+    Record<"skill" | "guard", readonly Readonly<Record<string, JsonValue>>[]>
   >;
 }>;
 
-export type AgentSettingsPanelProps = Readonly<{
+export type JsonValue =
+  string | number | boolean | null | readonly JsonValue[] | { readonly [key: string]: JsonValue };
+
+/** JSON-serializable configuration; runtime services are owned by workflow-ui. */
+export type AgentSettingsConfiguration = Readonly<{
+  agentId: string;
   schema: AgentSettingsSchema;
+  defaults: AgentSettings;
   graph: WorkflowGraph;
-  api: AgentSettingsApi;
-  store: AgentSettingsStore;
-  definitions: AgentDefinitionsStore;
-  disabled: boolean;
-  requestMode: string;
-  onRequestModeChange(mode: string): void;
-  apiBaseUrl: string;
+  edgeLimits?: Readonly<Record<string, string>>;
+  /** Step IDs mapped to a count source or a fixed worker label. */
+  nodeDetails?: Readonly<Record<string, string>>;
+}>;
+export type AgentSettingsPanelProps = Readonly<{
+  config: AgentSettingsConfiguration &
+    Readonly<{
+      projectId: string;
+      apiBaseUrl: string;
+      disabled?: boolean;
+    }>;
 }>;
 export const uncoveredTestTypes = (settings: AgentSettings): readonly string[] =>
   settings.testTypes.filter(

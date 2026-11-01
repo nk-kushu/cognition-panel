@@ -3,6 +3,7 @@ import { Alert, Button, Modal, Select, Spin, Switch, Tag } from "antd";
 import { useThemeMode } from "antd-style";
 import { useState } from "react";
 import { languageForPath } from "../../shared/components/CodeEditor";
+import { MONOKAI_THEME, registerMonokaiTheme } from "../../shared/components/monokaiTheme";
 import { useEditorFontSize } from "../../shared/lib/editorFontSize";
 
 /** Exact versions belonging to a server-recorded proposal. */
@@ -153,7 +154,8 @@ export function ChangeReview({
                 original={change.before ?? ""}
                 modified={change.after ?? ""}
                 language={languageForPath(change.path)}
-                theme={isDarkMode ? "vs-dark" : "light"}
+                theme={isDarkMode ? MONOKAI_THEME : "light"}
+                beforeMount={registerMonokaiTheme}
                 loading={<Spin aria-label="Loading diff" />}
                 options={{
                   readOnly: true,
