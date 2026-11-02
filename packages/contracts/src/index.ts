@@ -160,6 +160,8 @@ export type StartAgentRunRequest = Readonly<{
   files: readonly string[];
   /** Starts the agent under the debugger; breakpoints bind before any agent code runs. */
   debug: boolean;
+  /** Hold at agent entry so a debugger in another app can connect before execution. */
+  pauseOnEntry?: boolean;
   breakpoints?: DebugBreakpointsDto;
 }>;
 export type ChatThreadDto = Readonly<{
@@ -200,6 +202,7 @@ export type AgentRunStatus =
 export type AgentRunDto = Readonly<{
   id: string;
   projectId: string;
+  workspaceId?: string;
   agentName: string;
   debug: boolean;
   status: AgentRunStatus;

@@ -13,6 +13,7 @@ export const paths = {
   /** The kushibot debug events one chat run recorded. */
   runDebugEvents: (projectId: string, runId: string) =>
     `/projects/${encodeURIComponent(projectId)}/runs/${encodeURIComponent(runId)}/debug-events`,
+  runDebugger: (runId: string) => `/debug/runs/${encodeURIComponent(runId)}`,
   chatThreads: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/chat-threads`,
   tasks: (taskId?: string) => (taskId ? `/tasks/${encodeURIComponent(taskId)}` : "/tasks"),
   notes: (noteId?: string) => (noteId ? `/notes/${encodeURIComponent(noteId)}` : "/notes"),
@@ -22,6 +23,7 @@ export const paths = {
 } as const;
 
 const activityPatterns: readonly [Activity, string][] = [
+  ["agents", "/debug/runs/*"],
   ["files", "/projects/:projectId/files/*"],
   ["files", "/projects/:projectId/runs/*"],
   ["files", "/projects/:projectId/chat-threads/*"],

@@ -2,6 +2,7 @@ import { PluginsPage } from "../plugins/PluginsPage";
 import { useEffect } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { RunDebuggerPage } from "../agents/RunDebuggerPage";
 import { AgentsPage } from "../agents/AgentsPage";
 import { ChatThreadsScreen } from "../chat/ChatThreadsScreen";
 import { DebugEventsScreen } from "../debug-events/DebugEventsScreen";
@@ -71,6 +72,7 @@ export function WorkbenchRoutes() {
       <Route path="files" element={<FilesPage />} />
       <Route path="tasks/:taskId?" element={<Panes main={<TasksScreen />} />} />
       <Route path="notes/:noteId?" element={<NotesPage />} />
+      <Route path="debug/runs/:runId" element={<RunDebuggerPage />} />
       <Route path="agents/:agentName?" element={<AgentsPage />} />
       <Route path="plugins/:pluginId?" element={<Panes main={<PluginsPage />} />} />
       <Route path="settings" element={<Panes main={<SettingsScreen />} />} />

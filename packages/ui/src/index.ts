@@ -1,6 +1,8 @@
 import "./shared/styles/index.css";
 
 export { KushexPanel } from "./KushexPanel";
+export { CognitionChat } from "./CognitionChat";
+export type { CognitionChatProps } from "./CognitionChat";
 export type { AgentDefinitionDto, AgentSettingsDto, ProjectMemoryDto } from "@kushex/contracts";
 export type {
   AgentConfigurationProps,

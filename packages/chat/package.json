@@ -1,0 +1,32 @@
+{
+  "name": "@kushex/chat",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Embeddable Cognition chat connected to a shared agent runtime.",
+  "main": "./dist/index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist",
+    "index.d.ts",
+    "README.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "build": "pnpm --dir ../ui exec vite build --config vite.chat.config.ts",
+    "prepack": "pnpm build"
+  },
+  "peerDependencies": {
+    "react": ">=19.2.0 <20",
+    "react-dom": ">=19.2.0 <20",
+    "antd": ">=6.3.0 <7"
+  }
+}

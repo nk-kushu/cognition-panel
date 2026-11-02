@@ -37,7 +37,17 @@ type KushexPanelProps = KushexPanelOptions & Readonly<{ ref?: Ref<KushexPanelHan
  * The Cognition Panel panel. Store and theme are created per mounted instance, so several
  * panels (or tests) on one page never share state.
  */
-export function KushexPanel({
+export function KushexPanel(props: KushexPanelProps) {
+  return (
+    <KushexProvider {...props}>
+      <Workbench />
+    </KushexProvider>
+  );
+}
+
+/** Shared, isolated state and styling for the full panel and standalone chat. */
+export function KushexProvider({
+  children,
   instanceId = "default",
   agentUiPlugins = [],
   apiBaseUrl,
@@ -48,7 +58,7 @@ export function KushexPanel({
   onNavigate,
   ref,
   ...rest
-}: KushexPanelProps) {
+}: KushexPanelProps & Readonly<{ children: ReactNode }>) {
   const [store] = useState(() => {
     return makeStore({
       instanceId,
@@ -82,9 +92,7 @@ export function KushexPanel({
         <PanelRouter mode={router} basename={basename} initialPath={initialPath}>
           <NavigationBridge navigateRef={navigateRef} onNavigate={onNavigate} />
           <AgentApiContext value={agentApi}>
-            <AgentUiPluginsContext value={agentUiPlugins}>
-              <Workbench />
-            </AgentUiPluginsContext>
+            <AgentUiPluginsContext value={agentUiPlugins}>{children}</AgentUiPluginsContext>
           </AgentApiContext>
         </PanelRouter>
       </ThemedPanel>

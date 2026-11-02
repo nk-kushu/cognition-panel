@@ -1,4 +1,5 @@
 import type {
+  AgentConfiguration,
   DebugBreakpointDto,
   DebugBreakpointsDto,
   DebugCommand,
@@ -17,7 +18,7 @@ export type AgentLaunch = Readonly<{
   /** Absolute path of the project checkout; the agent's working directory. */
   workspace: string;
   message: string;
-  configuration?: import("@kushex/contracts").AgentConfiguration;
+  configuration?: AgentConfiguration;
   files: readonly string[];
   /** Project data for the agent, loaded here because its process has no database access. */
   host?: unknown;
@@ -25,6 +26,7 @@ export type AgentLaunch = Readonly<{
   /** Private, in-memory provider credentials; never persisted with run state. */
   credentials?: Readonly<Record<string, string>>;
   breakpoints: DebugBreakpointsDto;
+  pauseOnEntry?: boolean;
   /** Stores a kushibot debug event the agent reported; it is validated, not trusted. */
   recordDebugEvent(event: unknown): void;
 }>;

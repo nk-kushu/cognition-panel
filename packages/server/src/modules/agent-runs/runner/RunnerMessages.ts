@@ -1,3 +1,5 @@
+import type { AgentConfiguration } from "@kushex/contracts";
+
 /** Server → runner, over the child process IPC channel. */
 export type RunnerCommand =
   | Readonly<{
@@ -5,7 +7,8 @@ export type RunnerCommand =
       entry: string;
       workspace: string;
       message: string;
-      configuration?: import("@kushex/contracts").AgentConfiguration;
+      configuration?: AgentConfiguration;
+      pauseOnEntry?: boolean;
       files: readonly string[];
       /** What the server loaded for this project; the agent process has no database. */
       host?: unknown;

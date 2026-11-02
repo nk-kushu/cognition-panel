@@ -276,6 +276,9 @@ export const kushexApi = createApi({
     }),
     // Agent runs stream their events over EventSource (app/agentRunStreams.ts); these
     // endpoints start, stop and debug them.
+    agentRun: build.query<AgentRunDto, string>({
+      query: (id) => `/agent-runs/${encodeURIComponent(id)}`,
+    }),
     startAgentRun: build.mutation<AgentRunDto, StartAgentRunRequest & { projectId: string }>({
       query: ({ projectId, ...body }) => ({
         url: `/projects/${encodeURIComponent(projectId)}/agent-runs`,

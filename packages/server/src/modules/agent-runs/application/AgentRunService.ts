@@ -122,6 +122,7 @@ export class AgentRunService implements ManagedResource {
       ...(host === undefined ? {} : { host }),
       ...(resume === undefined ? {} : { resume }),
       breakpoints: request.breakpoints ?? {},
+      pauseOnEntry: request.debug && request.pauseOnEntry === true,
       recordDebugEvent: (event) => this.debugEvents?.record(run, event),
     });
     run.attach(process);

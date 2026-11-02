@@ -112,6 +112,7 @@ export class ChildProcessAgentLauncher implements AgentLauncher {
         message: launch.message,
         files: launch.files,
         configuration: launch.configuration ?? {},
+        pauseOnEntry: debug && launch.pauseOnEntry === true,
         ...(launch.credentials ? { credentials: launch.credentials } : {}),
         ...(launch.host === undefined ? {} : { host: launch.host }),
         ...(launch.resume === undefined ? {} : { resume: launch.resume }),
@@ -122,9 +123,17 @@ export class ChildProcessAgentLauncher implements AgentLauncher {
 
     child.on("message", (report: RunnerReport) => {
       if (report.type === "loaded") {
-        void (debuggerSession?.settled() ?? Promise.resolve()).then(() => {
-          if (child.connected) child.send({ type: "call" } satisfies RunnerCommand);
-        });
+        void (debuggerSession?.settled() ?? Promise.resolve())
+          .then(async () => {
+            if (debuggerSession && launch.pauseOnEntry) await debuggerSession.breakOnEntry();
+            if (child.connected) child.send({ type: "call" } satisfies RunnerCommand);
+          })
+          .catch((error: unknown) => {
+            fail(
+              `Could not prepare the debugger: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            kill();
+          });
         return;
       }
       if (report.type === "progress") return run.emit(report);

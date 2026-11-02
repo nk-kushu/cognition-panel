@@ -1,7 +1,8 @@
 import { Alert, Button, Collapse, Empty, Input, Select, Tag, Tooltip } from "antd";
 import { IconChevronRight } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useContext } from "react";
+import { ChatHostContext, PanelLink } from "./ChatHostContext";
 import type { AgentConfiguration, AgentRunStatus } from "@kushex/contracts";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { errorMessage } from "../../shared/api/errorMessage";
@@ -80,7 +81,7 @@ export function ChatPanel() {
 
 function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
+  const host = useContext(ChatHostContext);
   const agents = useAgentsQuery();
   const threads = useChatThreadsQuery(projectId);
   const [loadThread, loadingThread] = useLazyChatThreadQuery();
@@ -124,7 +125,7 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
         ...(configurations[agentName] ? { configuration: configurations[agentName] } : {}),
         files,
         debug,
-        ...(debug ? { breakpoints } : {}),
+        ...(debug ? { breakpoints, ...(host.pauseOnEntry ? { pauseOnEntry: true } : {}) } : {}),
       }).unwrap();
       dispatch(runStarted(run));
       dispatch(kushexApi.util.invalidateTags(["ChatThreads"]));
@@ -214,7 +215,7 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
           onChange={(id: string) => void selectThread(id)}
           options={threads.data?.map((thread) => ({ value: thread.id, label: thread.title }))}
         />
-        <Button onClick={() => void navigate(paths.chatThreads(projectId))}>All threads</Button>
+        <PanelLink path={paths.chatThreads(projectId)}>All threads</PanelLink>
       </div>
       {(threadError || threads.error) && (
         <Alert type="error" showIcon title={threadError ?? errorMessage(threads.error)} />
@@ -523,7 +524,6 @@ function Steps({ steps, active }: Readonly<{ steps: readonly string[]; active: b
 
 function RunMessage({ runId }: Readonly<{ runId: string }>) {
   const run = useAppSelector((state) => selectRun(state, runId));
-  const navigate = useNavigate();
   const [cancel, cancelling] = useCancelAgentRunMutation();
   const [command] = useDebugCommandMutation();
   if (!run) return null;
@@ -548,15 +548,24 @@ function RunMessage({ runId }: Readonly<{ runId: string }>) {
           )}
           <StatusBadge status={run.status} />
           <Tooltip title="Debug events: kushibot's timeline of this run">
-            <Button
+            <PanelLink
+              path={paths.runDebugEvents(run.projectId, run.id)}
               size="small"
               type="text"
               shape="circle"
               className="kx:ml-auto"
-              onClick={() => void navigate(paths.runDebugEvents(run.projectId, run.id))}
               icon={<AppIcon icon={DebugEventsIcon} label="Debug events" />}
             />
           </Tooltip>
+          {run.debug && (
+            <PanelLink
+              size="small"
+              path={paths.runDebugger(run.id)}
+              internalPath={paths.agents(run.agentName)}
+            >
+              Open debugger
+            </PanelLink>
+          )}
           {active && (
             <Tooltip title="Stop run">
               <Button
@@ -579,9 +588,6 @@ function RunMessage({ runId }: Readonly<{ runId: string }>) {
             title={`Paused on ${run.paused.reason}${top ? ` at ${frameLabel(top)}` : ""}`}
             action={
               <div className="kx:flex kx:flex-col kx:gap-1">
-                <Button size="small" onClick={() => void navigate(paths.agents(run.agentName))}>
-                  Open debugger
-                </Button>
                 <Button
                   size="small"
                   onClick={() => void command({ runId: run.id, command: "continue" })}

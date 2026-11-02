@@ -69,6 +69,7 @@ export function mockKushexApi(
   const pageNotes: NoteDto[] = [];
   /** Bodies of started agent runs, in order. */
   const runs: Record<string, unknown>[] = [];
+  const liveRuns: Record<string, AgentRunDto> = {};
   const proposals: Record<string, CodingProposalReviewDto> = {};
   const proposalApplies: { runId: string; digest: string }[] = [];
   const proposalChecks: { runId: string; digest: string }[] = [];
@@ -341,8 +342,14 @@ export function mockKushexApi(
         status: "starting",
         startedAt: "2026-10-26T00:00:00.000Z",
       };
+      liveRuns[run.id] = run;
       return respond(run, 201);
     }
+    const liveRunRoute = /^\/agent-runs\/([^/]+)$/.exec(route);
+    if (liveRunRoute)
+      return liveRuns[liveRunRoute[1]!]
+        ? respond(liveRuns[liveRunRoute[1]!])
+        : respond({ message: "Agent run not found." }, 404);
     const debugEventsRoute = /^\/agent-runs\/([^/]+)\/debug-events$/.exec(route);
     if (debugEventsRoute) {
       const runId = debugEventsRoute[1]!;
@@ -453,6 +460,7 @@ export function mockKushexApi(
     notes,
     pageNotes,
     runs,
+    liveRuns,
     proposals,
     proposalApplies,
     proposalChecks,

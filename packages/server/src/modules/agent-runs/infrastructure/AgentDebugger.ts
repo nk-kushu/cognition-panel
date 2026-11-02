@@ -105,6 +105,7 @@ export class AgentDebugger {
   private lastStep = "Debugger.stepInto";
   /** Steps taken on their own through generated code since the user's step. */
   private smartSteps = 0;
+  private entryBreakpointId: string | null = null;
   /** Source maps of code outside the agent still being read. */
   private readonly loadingMaps = new Set<Promise<void>>();
 
@@ -158,6 +159,24 @@ export class AgentDebugger {
     if (command !== "continue") this.lastStep = method;
     this.smartSteps = 0;
     await this.client.send(method);
+  }
+
+  /** The runner exposes chat only while loaded, before receiving the call command. */
+  async breakOnEntry(): Promise<void> {
+    const { result } = await this.client.send<{ result: { objectId?: string } }>(
+      "Runtime.evaluate",
+      {
+        expression: 'globalThis[Symbol.for("kushex.debug.chat")]',
+      },
+    );
+    if (!result.objectId) throw new Error("The agent chat entry is unavailable to the debugger.");
+    const { breakpointId } = await this.client.send<{ breakpointId: string }>(
+      "Debugger.setBreakpointOnFunctionCall",
+      {
+        objectId: result.objectId,
+      },
+    );
+    this.entryBreakpointId = breakpointId;
   }
 
   /** Replaces the file's breakpoints; they bind now when the file is loaded, otherwise on load. */
@@ -324,18 +343,27 @@ export class AgentDebugger {
       return;
     }
     const requested = this.requestedPause;
+    const entering =
+      this.entryBreakpointId !== null &&
+      (params.hitBreakpoints as string[] | undefined)?.includes(this.entryBreakpointId);
+    if (entering) {
+      await this.client.send("Debugger.removeBreakpoint", { breakpointId: this.entryBreakpointId });
+      this.entryBreakpointId = null;
+    }
     this.requestedPause = null;
     this.frames = frames;
     this.emit({
       type: "paused",
       // V8 reports breakpoints, steps and `debugger` statements alike as "other".
-      reason: (params.hitBreakpoints as unknown[] | undefined)?.length
-        ? "breakpoint"
-        : reason === "other"
-          ? (requested ?? "debugger")
-          : reason === "debugCommand"
-            ? "pause"
-            : reason,
+      reason: entering
+        ? "entry"
+        : (params.hitBreakpoints as unknown[] | undefined)?.length
+          ? "breakpoint"
+          : reason === "other"
+            ? (requested ?? "debugger")
+            : reason === "debugCommand"
+              ? "pause"
+              : reason,
       frames: this.withoutInternals([
         ...frames.map((frame) => this.frame(frame)),
         ...this.asyncFrames(params.asyncStackTrace as StackTrace | undefined),

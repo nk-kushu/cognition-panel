@@ -192,6 +192,49 @@ const post = (url: string, body: object) =>
   fetch(`${base}${url}`, { method: "POST", headers, body: JSON.stringify(body) });
 
 describe("agent runs", () => {
+  it("holds an embedded debug run at entry, lets another client discover it and set breakpoints before continuing", async () => {
+    const run = await launch({
+      agentName: "echo",
+      message: "hello world",
+      debug: true,
+      pauseOnEntry: true,
+    });
+    const chat = events(run.id);
+    const paused = await chat.next("paused");
+    expect(paused.reason).toBe("entry");
+    expect(paused.frames[0]?.location.file).toBeTruthy();
+    expect(chat.received.some((event) => event.type === "progress")).toBe(false);
+
+    const discovered = (await (await fetch(`${base}/agent-runs/${run.id}`)).json()) as AgentRunDto;
+    expect(discovered).toMatchObject({
+      id: run.id,
+      status: "paused",
+      projectId: project.id,
+      workspaceId: project.workspace.id,
+    });
+    const editor = events(run.id);
+    expect((await editor.next("paused")).reason).toBe("entry");
+    expect(
+      (
+        await fetch(`${base}/agent-runs/${run.id}/breakpoints`, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({ file: "agent.ts", lines: [13] }),
+        })
+      ).status,
+    ).toBe(200);
+    await post(`/agent-runs/${run.id}/debug`, { command: "continue" });
+    expect((await editor.next("paused")).frames[0]).toMatchObject({
+      name: "chat",
+      location: { file: "agent.ts", line: 13 },
+    });
+    await post(`/agent-runs/${run.id}/debug`, { command: "continue" });
+    expect((await chat.next("result")).value).toEqual({ answer: "HELLO WORLD" });
+    await editor.next("status", (event) => event.status === "completed");
+    chat.close();
+    editor.close();
+  });
+
   it("runs an agent's chat export and streams its progress, output and result", async () => {
     const run = await launch({ agentName: "echo", message: "hello world" });
     expect(run).toMatchObject({ agentName: "echo", debug: false, projectId: project.id });

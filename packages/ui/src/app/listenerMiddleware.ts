@@ -124,7 +124,8 @@ export function createListeners(options: StoreOptions = {}) {
 
   startListening({
     actionCreator: workspaceSelected,
-    effect: (_action, api) => {
+    effect: (action, api) => {
+      if (api.getOriginalState().workbench.workspaceId === action.payload) return;
       api.dispatch(kushexApi.util.resetApiState());
     },
   });

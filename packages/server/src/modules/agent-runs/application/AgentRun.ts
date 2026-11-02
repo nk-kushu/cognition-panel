@@ -43,6 +43,7 @@ export class AgentRun {
     return {
       id: this.id,
       projectId: this.projectId,
+      ...(this.workspaceId ? { workspaceId: this.workspaceId } : {}),
       agentName: this.agentName,
       debug: this.debug,
       status: this.currentStatus,

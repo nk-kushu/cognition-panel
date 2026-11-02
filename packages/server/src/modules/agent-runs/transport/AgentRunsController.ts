@@ -61,6 +61,7 @@ export class AgentRunsController implements HttpController {
                 )
                 .optional(),
               debug: z.boolean(),
+              pauseOnEntry: z.boolean().optional(),
               breakpoints: z.record(agentFile, lines).optional(),
             })
             .strict(),

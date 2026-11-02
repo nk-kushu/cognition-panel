@@ -5,6 +5,7 @@
  * (in debug mode, once breakpoints are bound). This file is not imported by the server.
  */
 import { registerHooks } from "node:module";
+import type { AgentConfiguration } from "@kushex/contracts";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { KUSHIBOT_ENTRY_ENV, type RunnerCommand, type RunnerReport } from "./RunnerMessages.js";
@@ -12,7 +13,7 @@ import { KUSHIBOT_ENTRY_ENV, type RunnerCommand, type RunnerReport } from "./Run
 /** What an agent's `chat` export receives; documented in plugins/README.md. */
 type ChatRequest = Readonly<{
   message: string;
-  configuration: import("@kushex/contracts").AgentConfiguration;
+  configuration: AgentConfiguration;
   files: readonly string[];
   workspace: string;
   signal: AbortSignal;
@@ -79,8 +80,13 @@ async function run(command: Extract<RunnerCommand, { type: "start" }>): Promise<
       throw new Error(
         `${path.basename(path.dirname(command.entry))}/${path.basename(command.entry)} does not export a \`chat\` function, so it cannot run from the chat. See plugins/README.md.`,
       );
+    // Expose the function to the inspector only until the parent prepares its one-shot
+    // entry breakpoint. User code is called after the parent sends `call`.
+    const entrySymbol = Symbol.for("kushex.debug.chat");
+    if (command.pauseOnEntry) Reflect.set(globalThis, entrySymbol, agent.chat);
     await report({ type: "loaded" });
     await call;
+    if (command.pauseOnEntry) Reflect.deleteProperty(globalThis, entrySymbol);
     const debug = await debugRecording();
     const request: ChatRequest = {
       message: command.message,
