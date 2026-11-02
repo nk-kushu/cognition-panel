@@ -76,8 +76,9 @@ manifest and restarting the server. The packages directory is mounted read-write
 into the backend as `/plugins` (`KUSHEX_PLUGINS_DIR`, default on the host:
 `kushex/plugins`). To
 type-check `import ... from "kushibot"` in the editor, Compose sets
-`KUSHEX_KUSHIBOT_DIR` to `/app/node_modules/kushibot`, the built package included
-in the backend image. Outside Docker, set it to a built kushibot checkout visible
+`KUSHEX_KUSHIBOT_DIR` to `/app/node_modules/kushibot` in the production image and
+`/app/packages/server/node_modules/kushibot` in development, matching pnpm's
+workspace dependency layout. Outside Docker, set it to a built kushibot checkout visible
 to the backend; without it the editor works untyped.
 
 The chat panel runs an agent on the open project, and **Debug** runs it under a

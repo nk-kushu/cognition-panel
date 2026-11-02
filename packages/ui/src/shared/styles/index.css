@@ -290,3 +290,11 @@
 
 .kx-mermaid { overflow: auto; margin-bottom: 0.75em; }
 .kx-mermaid svg { display: block; max-width: 100%; height: auto; margin: auto; }
+
+.kx-mermaid-toolbar { display: flex; justify-content: flex-end; margin-bottom: 0.5em; }
+.kx-mermaid-expanded svg { width: 100%; max-width: none !important; }
+
+.kx-mermaid-expanded { display: flex; flex-direction: column; height: 100%; margin-bottom: 0; overflow: hidden; }
+.kx-mermaid-pan-toolbar { align-items: center; justify-content: space-between; flex-shrink: 0; }
+.kx-mermaid-pan-viewport { flex: 1; min-height: 0; overflow: hidden; cursor: grab; touch-action: none; user-select: none; }
+.kx-mermaid-pan-viewport:active { cursor: grabbing; }

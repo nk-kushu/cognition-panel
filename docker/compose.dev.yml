@@ -48,6 +48,8 @@ services:
     command: ["pnpm", "--filter", "@kushex/server", "dev"]
     environment:
       NODE_ENV: development
+      # pnpm keeps workspace dependencies under their owning package in development.
+      KUSHEX_KUSHIBOT_DIR: /app/packages/server/node_modules/kushibot
     volumes:
       - ../packages/server/src:/app/packages/server/src
       - ../packages/contracts/src:/app/packages/contracts/src
