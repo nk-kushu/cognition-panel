@@ -1,6 +1,6 @@
-import type { DebugEventDto, RecordedDebugEventDto } from "@kushex/contracts";
+import type { DebugEventDto, RecordedDebugEventDto } from "./types";
 import { expect, it } from "vitest";
-import { recorded } from "../../test/debugEvents";
+import { recorded } from "./test/debugEvents";
 import { buildTrace, describeEvent, matchingSpans, traceStats, visibleSpans } from "./debugTrace";
 
 let sequence = 0;

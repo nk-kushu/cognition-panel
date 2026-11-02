@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, it } from "vitest";
-import { recorded } from "../../test/debugEvents";
+import { recorded } from "./test/debugEvents";
 import { ExecutionDetails } from "./ExecutionDetails";
 it("shows the execution stages and the readable request", () => {
   render(

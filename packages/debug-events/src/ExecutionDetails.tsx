@@ -1,8 +1,8 @@
-import type { RecordedDebugEventDto } from "@kushex/contracts";
+import type { RecordedDebugEventDto } from "./types";
 import { Button, Modal, Tooltip } from "antd";
 import { useState } from "react";
-import { AppIcon } from "../../shared/components/AppIcon";
-import { FullscreenIcon } from "../../shared/lib/icons";
+import { AppIcon } from "./internal/AppIcon";
+import { FullscreenIcon } from "./internal/icons";
 import { executionDetails } from "./executionContent";
 
 const labels: Record<string, string> = {
@@ -40,12 +40,12 @@ function DetailContent({
   return (
     <>
       {!detail.complete && (
-        <p role="status" className="kx:text-xs kx:text-text-muted">
+        <p role="status" className="kxd:text-xs kxd:text-text-muted">
           Some chunks are missing. This is not the complete content.
         </p>
       )}
       <pre
-        className={`kx:m-0 kx:mt-2 kx:overflow-auto kx:font-mono kx:text-[11px] kx:break-words kx:whitespace-pre-wrap ${heightClass}`}
+        className={`kxd:m-0 kxd:mt-2 kxd:overflow-auto kxd:font-mono kxd:text-[11px] kxd:break-words kxd:whitespace-pre-wrap ${heightClass}`}
       >
         {detail.text}
       </pre>
@@ -62,23 +62,23 @@ export function ExecutionDetails({
   );
   const [fullscreen, setFullscreen] = useState<ExecutionDetail | null>(null);
   return (
-    <section aria-label="Execution content" className="kx:flex kx:min-w-0 kx:flex-col kx:gap-2">
-      <h3 className="kx:m-0 kx:text-xs kx:font-semibold">
+    <section aria-label="Execution content" className="kxd:flex kxd:min-w-0 kxd:flex-col kxd:gap-2">
+      <h3 className="kxd:m-0 kxd:text-xs kxd:font-semibold">
         Input → LLM → action → result → next turn
       </h3>
       {details.length === 0 ? (
-        <p className="kx:m-0 kx:text-xs kx:text-text-muted">
+        <p className="kxd:m-0 kxd:text-xs kxd:text-text-muted">
           Execution content was not recorded for this turn. New runs with the updated KushiBot
           include requests, replies and state changes.
         </p>
       ) : (
         details.map((detail, index) => (
-          <div key={`${detail.stage}:${index}`} className="kx:relative kx:min-w-0">
-            <details className="kx:rounded kx:border kx:border-solid kx:border-border kx:bg-surface kx:p-2">
-              <summary className="kx:cursor-pointer kx:pr-7 kx:text-xs kx:font-medium">
+          <div key={`${detail.stage}:${index}`} className="kxd:relative kxd:min-w-0">
+            <details className="kxd:rounded kxd:border kxd:border-solid kxd:border-border kxd:bg-surface kxd:p-2">
+              <summary className="kxd:cursor-pointer kxd:pr-7 kxd:text-xs kxd:font-medium">
                 {detailLabel(detail)}
               </summary>
-              <DetailContent detail={detail} heightClass="kx:max-h-96" />
+              <DetailContent detail={detail} heightClass="kxd:max-h-96" />
             </details>
             <Tooltip title="Full screen">
               <Button
@@ -86,7 +86,7 @@ export function ExecutionDetails({
                 size="small"
                 aria-label={`Open ${labels[detail.stage] ?? detail.stage} full screen`}
                 icon={<AppIcon icon={FullscreenIcon} size="sm" />}
-                className="kx:absolute! kx:top-1 kx:right-1"
+                className="kxd:absolute! kxd:top-1 kxd:right-1"
                 onClick={() => setFullscreen(detail)}
               />
             </Tooltip>
@@ -103,7 +103,7 @@ export function ExecutionDetails({
         destroyOnHidden
       >
         {fullscreen && (
-          <DetailContent detail={fullscreen} heightClass="kx:h-[calc(100vh-110px)]" />
+          <DetailContent detail={fullscreen} heightClass="kxd:h-[calc(100vh-110px)]" />
         )}
       </Modal>
     </section>

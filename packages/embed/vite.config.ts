@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     // Bundle the panel from source, so its Tailwind CSS is compiled here as an inline string.
     alias: [
+      { find: /^@kushex\/debug-events\/style\.css\?inline$/, replacement: `${fileURLToPath(new URL("../debug-events/src/style.css", import.meta.url))}?inline` },
+      { find: /^@kushex\/debug-events$/, replacement: fileURLToPath(new URL("../debug-events/src/index.ts", import.meta.url)) },
+      { find: /^@kushex\/debug-events\/style\.css$/, replacement: fileURLToPath(new URL("../debug-events/src/style.css", import.meta.url)) },
       { find: /^@kushex\/ui$/, replacement: ui("index.ts") },
       { find: /^@kushex\/ui\/style\.css\?inline$/, replacement: `${ui("shared/styles/index.css")}?inline` },
       { find: /^@kushex\/ui\/preflight\.css\?inline$/, replacement: `${ui("shared/styles/preflight.css")}?inline` },

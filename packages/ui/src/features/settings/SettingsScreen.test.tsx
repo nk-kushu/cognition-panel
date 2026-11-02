@@ -41,6 +41,22 @@ describe("Editor settings", () => {
     });
   });
 
+  it("saves a separate Markdown preview font size", async () => {
+    const { user } = await openEditorSection();
+    const input = screen.getByLabelText("Markdown preview font size");
+    await waitFor(() => expect(input).toHaveValue("13"));
+    await user.clear(input);
+    await user.type(input, "22");
+    await user.tab();
+    await waitFor(async () => {
+      const response = await fetch(new Request(new URL("/settings", location.href)));
+      expect(await response.json()).toMatchObject({
+        markdownPreviewFontSize: 22,
+        editorFontSize: 13,
+      });
+    });
+  });
+
   it("clamps a size outside the supported range", async () => {
     const { user, input } = await openEditorSection();
     await waitFor(() => expect(input).toHaveValue("13"));

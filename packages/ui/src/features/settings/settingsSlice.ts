@@ -23,6 +23,7 @@ export const initialSettings: SettingsState = {
   density: "comfortable",
   editorFontSize: DEFAULT_EDITOR_FONT_SIZE,
   noteFontSize: 13,
+  markdownPreviewFontSize: 13,
   splitterSizes: {},
   loadError: false,
   saveError: false,
@@ -54,6 +55,10 @@ export const settingsSlice = createSlice({
       ...state,
       editorFontSize: action.payload,
     }),
+    markdownPreviewFontSizeChanged: (state, action: PayloadAction<number>) => ({
+      ...state,
+      markdownPreviewFontSize: action.payload,
+    }),
     noteFontSizeChanged: (state, action: PayloadAction<number>) => ({
       ...state,
       noteFontSize: action.payload,
@@ -67,6 +72,7 @@ export const settingsSlice = createSlice({
     selectColorMode: (state) => state.colorMode,
     selectDensity: (state) => state.density,
     selectEditorFontSize: (state) => state.editorFontSize,
+    selectMarkdownPreviewFontSize: (state) => state.markdownPreviewFontSize,
     selectNoteFontSize: (state) => state.noteFontSize,
     selectSplitterSizes: (state): SplitterSizesDto => state.splitterSizes,
   },
@@ -77,6 +83,7 @@ export const {
   densityChanged,
   editorFontSizeChanged,
   noteFontSizeChanged,
+  markdownPreviewFontSizeChanged,
   splitterSizesChanged,
   settingsLoaded,
   settingsLoadFailed,
@@ -87,6 +94,7 @@ export const {
   selectDensity,
   selectEditorFontSize,
   selectNoteFontSize,
+  selectMarkdownPreviewFontSize,
   selectSplitterSizes,
 } = settingsSlice.selectors;
 

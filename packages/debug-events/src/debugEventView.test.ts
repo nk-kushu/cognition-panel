@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { recorded } from "../../test/debugEvents";
+import { recorded } from "./test/debugEvents";
 import { countByLevel, filterEvents, formatDuration, formatOffset } from "./debugEventView";
 
 const events = [

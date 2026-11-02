@@ -1,0 +1,24 @@
+@layer theme, base, antd, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme) prefix(kxd);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(kxd);
+
+/* Include viewer utilities in the distributable CSS. */
+@source "./";
+
+/* Tokens are supplied by the viewer from Ant Design ConfigProvider. */
+@theme inline {
+  --color-primary: var(--kxd-ant-color-primary);
+  --color-success: var(--kxd-ant-color-success);
+  --color-warning: var(--kxd-ant-color-warning);
+  --color-error: var(--kxd-ant-color-error);
+  --color-surface: var(--kxd-ant-color-bg-container);
+  --color-surface-muted: var(--kxd-ant-color-bg-layout);
+  --color-fill: var(--kxd-ant-color-fill-tertiary);
+  --color-border: var(--kxd-ant-color-border);
+  --color-text: var(--kxd-ant-color-text);
+  --color-text-muted: var(--kxd-ant-color-text-secondary);
+  --radius-kxd: var(--kxd-ant-border-radius);
+  --font-sans: var(--kxd-ant-font-family);
+  --font-mono: var(--kxd-ant-font-family-code);
+}

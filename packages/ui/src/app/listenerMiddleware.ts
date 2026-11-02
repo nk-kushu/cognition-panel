@@ -5,6 +5,7 @@ import {
   densityChanged,
   editorFontSizeChanged,
   noteFontSizeChanged,
+  markdownPreviewFontSizeChanged,
   splitterSizesChanged,
   settingsRequested,
   settingsSaveRetried,
@@ -47,6 +48,9 @@ export function createListeners(options: StoreOptions = {}) {
             ...(!edited.has("density") ? { density: settings.density } : {}),
             ...(!edited.has("editorFontSize") ? { editorFontSize: settings.editorFontSize } : {}),
             ...(!edited.has("noteFontSize") ? { noteFontSize: settings.noteFontSize } : {}),
+            ...(!edited.has("markdownPreviewFontSize")
+              ? { markdownPreviewFontSize: settings.markdownPreviewFontSize ?? 13 }
+              : {}),
             // Splitters moved before the load finished keep their local sizes.
             splitterSizes: { ...settings.splitterSizes, ...api.getState().settings.splitterSizes },
           }),
@@ -66,6 +70,7 @@ export function createListeners(options: StoreOptions = {}) {
       densityChanged,
       editorFontSizeChanged,
       noteFontSizeChanged,
+      markdownPreviewFontSizeChanged,
       splitterSizesChanged,
       settingsSaveRetried,
     ),
@@ -77,20 +82,27 @@ export function createListeners(options: StoreOptions = {}) {
           ? { density: action.payload }
           : editorFontSizeChanged.match(action)
             ? { editorFontSize: action.payload }
-            : noteFontSizeChanged.match(action)
-              ? { noteFontSize: action.payload }
-              : splitterSizesChanged.match(action)
-                ? { splitterSizes: { [action.payload.id]: action.payload.sizes } }
-                : {
-                    ...(failed.has("colorMode") ? { colorMode: state.colorMode } : {}),
-                    ...(failed.has("density") ? { density: state.density } : {}),
-                    ...(failed.has("editorFontSize")
-                      ? { editorFontSize: state.editorFontSize }
-                      : {}),
-                    ...(failed.has("noteFontSize") ? { noteFontSize: state.noteFontSize } : {}),
-                    // The server merges by id, so resending every splitter is safe.
-                    ...(failed.has("splitterSizes") ? { splitterSizes: state.splitterSizes } : {}),
-                  };
+            : markdownPreviewFontSizeChanged.match(action)
+              ? { markdownPreviewFontSize: action.payload }
+              : noteFontSizeChanged.match(action)
+                ? { noteFontSize: action.payload }
+                : splitterSizesChanged.match(action)
+                  ? { splitterSizes: { [action.payload.id]: action.payload.sizes } }
+                  : {
+                      ...(failed.has("colorMode") ? { colorMode: state.colorMode } : {}),
+                      ...(failed.has("density") ? { density: state.density } : {}),
+                      ...(failed.has("editorFontSize")
+                        ? { editorFontSize: state.editorFontSize }
+                        : {}),
+                      ...(failed.has("noteFontSize") ? { noteFontSize: state.noteFontSize } : {}),
+                      ...(failed.has("markdownPreviewFontSize")
+                        ? { markdownPreviewFontSize: state.markdownPreviewFontSize }
+                        : {}),
+                      // The server merges by id, so resending every splitter is safe.
+                      ...(failed.has("splitterSizes")
+                        ? { splitterSizes: state.splitterSizes }
+                        : {}),
+                    };
       const fields = Object.keys(patch) as (keyof UserSettingsDto)[];
       if (!fields.length) return;
       fields.forEach((field) => edited.add(field));

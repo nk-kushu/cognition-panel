@@ -1,5 +1,8 @@
-import panelCss from "@kushex/ui/style.css?inline";
+import debugCss from "@kushex/debug-events/style.css?inline";
+import basePanelCss from "@kushex/ui/style.css?inline";
 import preflightCss from "@kushex/ui/preflight.css?inline";
+
+const panelCss = `${basePanelCss}\n${debugCss}`;
 
 const PROPERTY_RULE = /@property\s+[\w-]+\s*\{[^}]*\}/g;
 

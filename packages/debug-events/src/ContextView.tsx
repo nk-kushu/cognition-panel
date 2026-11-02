@@ -2,7 +2,7 @@ import { ExecutionDetails } from "./ExecutionDetails";
 import { Button, Empty, Segmented, Tag, Tooltip } from "antd";
 import { IconArrowNarrowDown } from "@tabler/icons-react";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
-import { AppIcon } from "../../shared/components/AppIcon";
+import { AppIcon } from "./internal/AppIcon";
 import {
   ArtifactIcon,
   ContextIcon,
@@ -10,8 +10,8 @@ import {
   ModelCallIcon,
   NotebookIcon,
   TraceIcon,
-} from "../../shared/lib/icons";
-import { borderAll, borderB, borderL } from "../../shared/lib/styles";
+} from "./internal/icons";
+import { borderAll, borderB, borderL } from "./internal/styles";
 import { formatDuration } from "./debugEventView";
 import { formatBytes, formatCount } from "./debugTrace";
 import type {
@@ -82,21 +82,21 @@ export function ContextView({ model, selectedTurn, onSelectTurn, onOpenTrace }: 
   if (model.sessions.length === 0)
     return (
       <Empty
-        className="kx:mt-12"
+        className="kxd:mt-12"
         description="No agentic session recorded yet: the context view fills in once a mind unit runs its first turn."
       />
     );
 
   return (
-    <div className="kx:grid kx:h-full kx:min-h-0 kx:grid-cols-1 kx:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] kx:lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] kx:lg:grid-rows-1">
-      <div className="kx:min-h-0 kx:overflow-auto kx:px-4 kx:py-3">
+    <div className="kxd:grid kxd:h-full kxd:min-h-0 kxd:grid-cols-1 kxd:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] kxd:lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] kxd:lg:grid-rows-1">
+      <div className="kxd:min-h-0 kxd:overflow-auto kxd:px-4 kxd:py-3">
         <ConceptStrip model={model} />
-        <div className="kx:mt-4 kx:mb-2 kx:flex kx:flex-wrap kx:items-center kx:gap-3">
+        <div className="kxd:mt-4 kxd:mb-2 kxd:flex kxd:flex-wrap kxd:items-center kxd:gap-3">
           <Legend model={model} tools={tools} />
           {hasWindow && (
             <Segmented<Scale>
               size="small"
-              className="kx:ml-auto"
+              className="kxd:ml-auto"
               value={scale}
               onChange={setScale}
               options={[
@@ -107,7 +107,7 @@ export function ContextView({ model, selectedTurn, onSelectTurn, onOpenTrace }: 
           )}
         </div>
         {!model.measured && (
-          <p className="kx:m-0 kx:mb-3 kx:rounded-md kx:bg-warning/10 kx:px-3 kx:py-2 kx:text-xs kx:text-text-muted">
+          <p className="kxd:m-0 kxd:mb-3 kxd:rounded-md kxd:bg-warning/10 kxd:px-3 kxd:py-2 kxd:text-xs kxd:text-text-muted">
             This run was recorded before kushibot measured its context window, so the composition is{" "}
             <b>estimated from the provider's input tokens</b>: the first call is the base, and each
             later increase is credited to the previous turn's action and its result. New runs record
@@ -135,7 +135,7 @@ export function ContextView({ model, selectedTurn, onSelectTurn, onOpenTrace }: 
       </div>
       <aside
         aria-label="Turn context details"
-        className={`kx:min-h-0 kx:overflow-auto kx:bg-surface-muted ${borderL} kx:max-lg:border-t kx:max-lg:border-l-0 kx:max-lg:border-solid kx:max-lg:border-border`}
+        className={`kxd:min-h-0 kxd:overflow-auto kxd:bg-surface-muted ${borderL} kxd:max-lg:border-t kxd:max-lg:border-l-0 kxd:max-lg:border-solid kxd:max-lg:border-border`}
       >
         {selected && (
           <TurnInspector
@@ -235,19 +235,19 @@ function ConceptStrip({ model }: Readonly<{ model: ContextModel }>) {
     },
   ];
   return (
-    <div className="kx:grid kx:grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] kx:gap-2">
+    <div className="kxd:grid kxd:grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] kxd:gap-2">
       {cards.map((card) => (
         <Tooltip key={card.title} title={card.about}>
           <div
-            className={`kx:flex kx:min-w-0 kx:cursor-help kx:flex-col kx:gap-0.5 kx:rounded-lg kx:bg-fill kx:px-3 kx:py-2 ${card.muted ? "kx:opacity-60" : ""}`}
+            className={`kxd:flex kxd:min-w-0 kxd:cursor-help kxd:flex-col kxd:gap-0.5 kxd:rounded-lg kxd:bg-fill kxd:px-3 kxd:py-2 ${card.muted ? "kxd:opacity-60" : ""}`}
           >
-            <span className="kx:flex kx:items-center kx:gap-1.5 kx:text-[11px] kx:text-text-muted">
-              <span style={{ color: card.color }} className="kx:inline-flex">
+            <span className="kxd:flex kxd:items-center kxd:gap-1.5 kxd:text-[11px] kxd:text-text-muted">
+              <span style={{ color: card.color }} className="kxd:inline-flex">
                 <AppIcon icon={card.icon} size="sm" />
               </span>
               {card.title}
             </span>
-            <span className="kx:text-[13px] kx:leading-snug kx:font-semibold">{card.value}</span>
+            <span className="kxd:text-[13px] kxd:leading-snug kxd:font-semibold">{card.value}</span>
           </div>
         </Tooltip>
       ))}
@@ -267,16 +267,19 @@ function Legend({ model, tools }: Readonly<{ model: ContextModel; tools: readonl
   return (
     <ul
       aria-label="Legend"
-      className="kx:m-0 kx:flex kx:list-none kx:flex-wrap kx:gap-x-3 kx:gap-y-1 kx:p-0 kx:text-xs kx:text-text-muted"
+      className="kxd:m-0 kxd:flex kxd:list-none kxd:flex-wrap kxd:gap-x-3 kxd:gap-y-1 kxd:p-0 kxd:text-xs kxd:text-text-muted"
     >
       {items.map(([key, label]) => (
-        <li key={key} className="kx:inline-flex kx:items-center kx:gap-1.5">
-          <span className="kx:size-2.5 kx:rounded-sm" style={{ background: colorOf(key, tools) }} />
+        <li key={key} className="kxd:inline-flex kxd:items-center kxd:gap-1.5">
+          <span
+            className="kxd:size-2.5 kxd:rounded-sm"
+            style={{ background: colorOf(key, tools) }}
+          />
           {label}
         </li>
       ))}
-      <li className="kx:inline-flex kx:items-center kx:gap-1.5">
-        <span className="kx:size-2.5 kx:rounded-sm" style={addedStyle("#8a8fa8")} />
+      <li className="kxd:inline-flex kxd:items-center kxd:gap-1.5">
+        <span className="kxd:size-2.5 kxd:rounded-sm" style={addedStyle("#8a8fa8")} />
         new this turn
       </li>
     </ul>
@@ -307,18 +310,18 @@ function SessionBlock({
   return (
     <section
       aria-label={`Session ${session.step ?? session.sessionId}`}
-      className={`kx:mb-2 kx:rounded-lg ${borderAll}`}
+      className={`kxd:mb-2 kxd:rounded-lg ${borderAll}`}
     >
       <header
-        className={`kx:flex kx:flex-wrap kx:items-center kx:gap-2 kx:px-3 kx:py-2 ${borderB}`}
+        className={`kxd:flex kxd:flex-wrap kxd:items-center kxd:gap-2 kxd:px-3 kxd:py-2 ${borderB}`}
       >
-        <span className="kx:text-[13px] kx:font-semibold">Step “{session.step ?? "?"}”</span>
+        <span className="kxd:text-[13px] kxd:font-semibold">Step “{session.step ?? "?"}”</span>
         {session.mode && (
-          <Tag bordered={false} className="kx:m-0">
+          <Tag bordered={false} className="kxd:m-0">
             {session.mode}
           </Tag>
         )}
-        <span className="kx:text-xs kx:text-text-muted">
+        <span className="kxd:text-xs kxd:text-text-muted">
           session {session.sessionId.slice(0, 8)} · {session.turns.length}{" "}
           {session.turns.length === 1 ? "turn" : "turns"}
           {session.instructionsBytes !== null &&
@@ -332,13 +335,13 @@ function SessionBlock({
                 ? "success"
                 : "warning"
             }
-            className="kx:m-0 kx:ml-auto"
+            className="kxd:m-0 kxd:ml-auto"
           >
             {session.outcome}
           </Tag>
         )}
       </header>
-      <ol aria-label="Turns" className="kx:m-0 kx:list-none kx:p-0 kx:py-1">
+      <ol aria-label="Turns" className="kxd:m-0 kxd:list-none kxd:p-0 kxd:py-1">
         {session.turns.map((turn) => (
           <TurnRow
             key={turn.spanId}
@@ -352,7 +355,7 @@ function SessionBlock({
         ))}
       </ol>
       {session.notebookEntries > 0 && (
-        <div className="kx:flex kx:items-center kx:gap-1.5 kx:px-3 kx:pb-2 kx:text-xs kx:text-text-muted">
+        <div className="kxd:flex kxd:items-center kxd:gap-1.5 kxd:px-3 kxd:pb-2 kxd:text-xs kxd:text-text-muted">
           <AppIcon icon={NotebookIcon} size="sm" />
           Notebook at the end: {session.notebookEntries} entries ·{" "}
           {formatBytes(session.notebookBytes)}
@@ -387,14 +390,14 @@ function TurnRow({
         type="button"
         aria-current={selected ? "true" : undefined}
         onClick={() => onSelect(turn.spanId)}
-        className={`kx:flex kx:w-full kx:cursor-pointer kx:items-center kx:gap-3 kx:border-0 kx:px-3 kx:py-1 kx:text-left kx:text-text ${selected ? "kx:bg-primary/10" : "kx:bg-transparent kx:hover:bg-fill"}`}
+        className={`kxd:flex kxd:w-full kxd:cursor-pointer kxd:items-center kxd:gap-3 kxd:border-0 kxd:px-3 kxd:py-1 kxd:text-left kxd:text-text ${selected ? "kxd:bg-primary/10" : "kxd:bg-transparent kxd:hover:bg-fill"}`}
       >
-        <span className="kx:w-7 kx:shrink-0 kx:font-mono kx:text-xs kx:text-text-muted">
+        <span className="kxd:w-7 kxd:shrink-0 kxd:font-mono kxd:text-xs kxd:text-text-muted">
           T{turn.number}
         </span>
-        <span className="kx:relative kx:h-4 kx:min-w-0 kx:flex-1 kx:overflow-hidden kx:rounded kx:bg-fill">
+        <span className="kxd:relative kxd:h-4 kxd:min-w-0 kxd:flex-1 kxd:overflow-hidden kxd:rounded kxd:bg-fill">
           <span
-            className="kx:absolute kx:inset-y-0 kx:left-0 kx:flex"
+            className="kxd:absolute kxd:inset-y-0 kxd:left-0 kxd:flex"
             style={{ width: `${width}%` }}
           >
             {turn.segments.map((segment, index) => (
@@ -408,13 +411,13 @@ function TurnRow({
             ))}
           </span>
           {turn.overLimit && (
-            <span className="kx:absolute kx:inset-y-0 kx:right-0 kx:w-1 kx:bg-error" />
+            <span className="kxd:absolute kxd:inset-y-0 kxd:right-0 kxd:w-1 kxd:bg-error" />
           )}
         </span>
-        <span className="kx:flex kx:w-20 kx:shrink-0 kx:flex-col kx:text-right kx:font-mono kx:text-xs kx:leading-tight kx:tabular-nums">
+        <span className="kxd:flex kxd:w-20 kxd:shrink-0 kxd:flex-col kxd:text-right kxd:font-mono kxd:text-xs kxd:leading-tight kxd:tabular-nums">
           {amount(turn.total, turn.unit)}
           {turn.addedValue > 0 && (
-            <span className="kx:text-[10px] kx:text-text-muted">
+            <span className="kxd:text-[10px] kxd:text-text-muted">
               +{amount(turn.addedValue, turn.unit)}
             </span>
           )}
@@ -426,7 +429,7 @@ function TurnRow({
               : "Share of input tokens served from the provider's prompt cache"
           }
         >
-          <span className="kx:hidden kx:w-12 kx:shrink-0 kx:text-right kx:font-mono kx:text-[11px] kx:text-text-muted kx:tabular-nums kx:sm:block">
+          <span className="kxd:hidden kxd:w-12 kxd:shrink-0 kxd:text-right kxd:font-mono kxd:text-[11px] kxd:text-text-muted kxd:tabular-nums kxd:sm:block">
             {turn.fill !== null
               ? percent(turn.fill)
               : turn.usage && turn.usage.input
@@ -434,20 +437,20 @@ function TurnRow({
                 : ""}
           </span>
         </Tooltip>
-        <span className="kx:flex kx:w-32 kx:shrink-0 kx:items-center kx:gap-1 kx:overflow-hidden kx:text-xs">
+        <span className="kxd:flex kxd:w-32 kxd:shrink-0 kxd:items-center kxd:gap-1 kxd:overflow-hidden kxd:text-xs">
           <ActionChip turn={turn} />
           {turn.notebook && (
             <Tooltip
               title={`Notebook: ${turn.notebook.entries} entries, ${formatBytes(turn.notebook.bytes)}`}
             >
-              <span className="kx:inline-flex kx:text-[#2f9e5b]">
+              <span className="kxd:inline-flex kxd:text-[#2f9e5b]">
                 <AppIcon icon={NotebookIcon} size="sm" />
               </span>
             </Tooltip>
           )}
           {turn.artifacts.length > 0 && (
             <Tooltip title={`${turn.artifacts.length} artifact(s) stored`}>
-              <span className="kx:inline-flex kx:items-center kx:text-[#0f8f90]">
+              <span className="kxd:inline-flex kxd:items-center kxd:text-[#0f8f90]">
                 <AppIcon icon={ArtifactIcon} size="sm" />
                 {turn.artifacts.length > 1 && turn.artifacts.length}
               </span>
@@ -470,7 +473,7 @@ function SegmentBar({
       title={`${segment.added ? "New: " : ""}${segment.label} — ${amount(segment.value, unit)} (${percent(share)})`}
     >
       <span
-        className={`kx:h-full ${segment.added ? "kx:outline kx:outline-1 kx:-outline-offset-1 kx:outline-text" : ""}`}
+        className={`kxd:h-full ${segment.added ? "kxd:outline kxd:outline-1 kxd:-outline-offset-1 kxd:outline-text" : ""}`}
         style={{
           width: `${share * 100}%`,
           minWidth: segment.value > 0 ? 2 : 0,
@@ -484,7 +487,7 @@ function SegmentBar({
 function ActionChip({ turn }: Readonly<{ turn: ContextTurn }>) {
   if (turn.overLimit)
     return (
-      <Tag bordered={false} color="error" className="kx:m-0">
+      <Tag bordered={false} color="error" className="kxd:m-0">
         window full
       </Tag>
     );
@@ -507,7 +510,7 @@ function ActionChip({ turn }: Readonly<{ turn: ContextTurn }>) {
         ? "error"
         : undefined;
   return (
-    <Tag bordered={false} color={color} className="kx:m-0 kx:truncate">
+    <Tag bordered={false} color={color} className="kxd:m-0 kxd:truncate">
       {text}
     </Tag>
   );
@@ -516,8 +519,8 @@ function ActionChip({ turn }: Readonly<{ turn: ContextTurn }>) {
 /** What the accepted result of one step became in the next session. */
 function Handoff({ from, to }: Readonly<{ from: ContextSession; to: ContextSession }>) {
   return (
-    <div className="kx:my-1 kx:flex kx:items-center kx:gap-2 kx:pl-4 kx:text-xs kx:text-text-muted">
-      <span className="kx:inline-flex kx:text-[#9b6cc4]">
+    <div className="kxd:my-1 kxd:flex kxd:items-center kxd:gap-2 kxd:pl-4 kxd:text-xs kxd:text-text-muted">
+      <span className="kxd:inline-flex kxd:text-[#9b6cc4]">
         <AppIcon icon={IconArrowNarrowDown} size="sm" />
       </span>
       <span>
@@ -544,17 +547,17 @@ function TurnInspector({
 }>) {
   const ordered = [...turn.segments].sort((a, b) => b.value - a.value);
   return (
-    <div className="kx:flex kx:flex-col kx:gap-4 kx:p-4">
-      <div className="kx:flex kx:items-start kx:gap-2">
-        <div className="kx:min-w-0 kx:flex-1">
-          <div className="kx:text-[11px] kx:font-medium kx:tracking-wide kx:text-text-muted kx:uppercase">
+    <div className="kxd:flex kxd:flex-col kxd:gap-4 kxd:p-4">
+      <div className="kxd:flex kxd:items-start kxd:gap-2">
+        <div className="kxd:min-w-0 kxd:flex-1">
+          <div className="kxd:text-[11px] kxd:font-medium kxd:tracking-wide kxd:text-text-muted kxd:uppercase">
             Step “{session.step ?? "?"}” · turn {turn.number}
           </div>
-          <div className="kx:text-sm kx:font-semibold">
+          <div className="kxd:text-sm kxd:font-semibold">
             Context sent to the model: {amount(turn.total, turn.unit)}
           </div>
           {turn.durationMs !== null && (
-            <div className="kx:text-xs kx:text-text-muted">
+            <div className="kxd:text-xs kxd:text-text-muted">
               turn took {formatDuration(turn.durationMs)}
             </div>
           )}
@@ -577,7 +580,7 @@ function TurnInspector({
             color={turn.overLimit ? "#d14d4d" : "#7c6fd6"}
             label={`≤${formatCount(turn.tokenUpperBound)} of ${formatCount(turn.budget)} tokens (${percent(turn.fill ?? 0)})`}
           />
-          <p className="kx:m-0 kx:mt-1 kx:text-[11px] kx:text-text-muted">
+          <p className="kxd:m-0 kxd:mt-1 kxd:text-[11px] kxd:text-text-muted">
             kushibot bounds tokens by request bytes + 1 KB; the budget is the model's context minus
             the reply allowance.
           </p>
@@ -585,28 +588,28 @@ function TurnInspector({
       )}
 
       <Section title={turn.unit === "bytes" ? "Composition (measured)" : "Composition (estimated)"}>
-        <ul className="kx:m-0 kx:flex kx:list-none kx:flex-col kx:gap-1 kx:p-0">
+        <ul className="kxd:m-0 kxd:flex kxd:list-none kxd:flex-col kxd:gap-1 kxd:p-0">
           {ordered.map((segment, index) => (
             <li
               key={`${segment.key}-${index}`}
-              className="kx:flex kx:items-center kx:gap-2 kx:text-xs"
+              className="kxd:flex kxd:items-center kxd:gap-2 kxd:text-xs"
             >
               <span
-                className="kx:size-2.5 kx:shrink-0 kx:rounded-sm"
+                className="kxd:size-2.5 kxd:shrink-0 kxd:rounded-sm"
                 style={
                   segment.added
                     ? addedStyle(colorOf(segment.key, tools))
                     : { background: colorOf(segment.key, tools) }
                 }
               />
-              <span className="kx:min-w-0 kx:flex-1 kx:truncate">
+              <span className="kxd:min-w-0 kxd:flex-1 kxd:truncate">
                 {segment.added && <b>new · </b>}
                 {segment.label}
               </span>
-              <span className="kx:font-mono kx:tabular-nums">
+              <span className="kxd:font-mono kxd:tabular-nums">
                 {amount(segment.value, turn.unit)}
               </span>
-              <span className="kx:w-12 kx:text-right kx:font-mono kx:text-text-muted kx:tabular-nums">
+              <span className="kxd:w-12 kxd:text-right kxd:font-mono kxd:text-text-muted kxd:tabular-nums">
                 {turn.total ? percent(segment.value / turn.total) : ""}
               </span>
             </li>
@@ -616,9 +619,9 @@ function TurnInspector({
 
       {turn.messageList.length > 0 && (
         <Section title={`Messages (${turn.messages ?? turn.messageList.length})`}>
-          <ol className="kx:m-0 kx:flex kx:list-none kx:flex-col kx:gap-0.5 kx:p-0">
+          <ol className="kxd:m-0 kxd:flex kxd:list-none kxd:flex-col kxd:gap-0.5 kxd:p-0">
             {turn.messages !== null && turn.messages > turn.messageList.length && (
-              <li className="kx:text-[11px] kx:text-text-muted">
+              <li className="kxd:text-[11px] kxd:text-text-muted">
                 … {turn.messages - turn.messageList.length} earlier messages
               </li>
             )}
@@ -627,14 +630,16 @@ function TurnInspector({
               return (
                 <li
                   key={message.index}
-                  className={`kx:flex kx:items-center kx:gap-2 kx:rounded kx:px-1 kx:text-xs ${message.added ? "kx:bg-primary/10" : ""}`}
+                  className={`kxd:flex kxd:items-center kxd:gap-2 kxd:rounded kxd:px-1 kxd:text-xs ${message.added ? "kxd:bg-primary/10" : ""}`}
                 >
-                  <span className="kx:w-6 kx:font-mono kx:text-text-muted">#{message.index}</span>
+                  <span className="kxd:w-6 kxd:font-mono kxd:text-text-muted">
+                    #{message.index}
+                  </span>
                   <span
-                    className="kx:size-2 kx:shrink-0 kx:rounded-full"
+                    className="kxd:size-2 kxd:shrink-0 kxd:rounded-full"
                     style={{ background: colorOf(key, tools) }}
                   />
-                  <span className="kx:w-14 kx:text-text-muted">
+                  <span className="kxd:w-14 kxd:text-text-muted">
                     {message.kind === "assistant"
                       ? "model"
                       : message.kind === "task"
@@ -643,14 +648,16 @@ function TurnInspector({
                           ? "tool"
                           : "runtime"}
                   </span>
-                  <span className="kx:min-w-0 kx:flex-1 kx:truncate">
+                  <span className="kxd:min-w-0 kxd:flex-1 kxd:truncate">
                     {message.kind === "task"
                       ? "task input"
                       : message.kind === "assistant"
                         ? `action ${message.source}`
                         : `observation ${message.source}`}
                   </span>
-                  <span className="kx:font-mono kx:tabular-nums">{formatBytes(message.bytes)}</span>
+                  <span className="kxd:font-mono kxd:tabular-nums">
+                    {formatBytes(message.bytes)}
+                  </span>
                 </li>
               );
             })}
@@ -666,7 +673,7 @@ function TurnInspector({
             color="#4f8fc0"
             label={`${formatCount(turn.usage.cached)} cached of ${formatCount(turn.usage.input)} input tokens`}
           />
-          <dl className="kx:m-0 kx:mt-2 kx:grid kx:grid-cols-2 kx:gap-x-3 kx:gap-y-0.5 kx:text-xs">
+          <dl className="kxd:m-0 kxd:mt-2 kxd:grid kxd:grid-cols-2 kxd:gap-x-3 kxd:gap-y-0.5 kxd:text-xs">
             <Stat label="Input" value={formatCount(turn.usage.input)} />
             <Stat
               label="Uncached input"
@@ -681,11 +688,11 @@ function TurnInspector({
       <ExecutionDetails events={turn.detailEvents ?? []} />
 
       <Section title="What the turn did">
-        <div className="kx:flex kx:flex-wrap kx:items-center kx:gap-1.5 kx:text-xs">
+        <div className="kxd:flex kxd:flex-wrap kxd:items-center kxd:gap-1.5 kxd:text-xs">
           <ActionChip turn={turn} />
-          {turn.toolStatus && <span className="kx:text-text-muted">tool {turn.toolStatus}</span>}
+          {turn.toolStatus && <span className="kxd:text-text-muted">tool {turn.toolStatus}</span>}
         </div>
-        <p className="kx:m-0 kx:mt-1 kx:text-[11px] kx:text-text-muted">
+        <p className="kxd:m-0 kxd:mt-1 kxd:text-[11px] kxd:text-text-muted">
           {turn.action === "tool"
             ? "The tool's result is appended to the context and sent with the next model call."
             : turn.action === "note"
@@ -695,8 +702,8 @@ function TurnInspector({
                 : ""}
         </p>
         {turn.notebook && (
-          <div className="kx:mt-2 kx:flex kx:items-center kx:gap-1.5 kx:text-xs">
-            <span className="kx:inline-flex kx:text-[#2f9e5b]">
+          <div className="kxd:mt-2 kxd:flex kxd:items-center kxd:gap-1.5 kxd:text-xs">
+            <span className="kxd:inline-flex kxd:text-[#2f9e5b]">
               <AppIcon icon={NotebookIcon} size="sm" />
             </span>
             {turn.notebook.full
@@ -715,7 +722,7 @@ function TurnInspector({
 function Section({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
     <section>
-      <h3 className="kx:m-0 kx:mb-1.5 kx:text-[11px] kx:font-medium kx:tracking-wide kx:text-text-muted kx:uppercase">
+      <h3 className="kxd:m-0 kxd:mb-1.5 kxd:text-[11px] kxd:font-medium kxd:tracking-wide kxd:text-text-muted kxd:uppercase">
         {title}
       </h3>
       {children}
@@ -732,13 +739,13 @@ function Meter({
   const share = Math.min(1, value / Math.max(1, max));
   return (
     <div>
-      <div className="kx:h-2 kx:overflow-hidden kx:rounded-full kx:bg-fill">
+      <div className="kxd:h-2 kxd:overflow-hidden kxd:rounded-full kxd:bg-fill">
         <div
-          className="kx:h-full kx:rounded-full"
+          className="kxd:h-full kxd:rounded-full"
           style={{ width: `max(2px, ${share * 100}%)`, background: color }}
         />
       </div>
-      <div className="kx:mt-1 kx:text-xs kx:tabular-nums">{label}</div>
+      <div className="kxd:mt-1 kxd:text-xs kxd:tabular-nums">{label}</div>
     </div>
   );
 }
@@ -746,22 +753,22 @@ function Meter({
 function Stat({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <>
-      <dt className="kx:text-text-muted">{label}</dt>
-      <dd className="kx:m-0 kx:text-right kx:font-mono kx:tabular-nums">{value}</dd>
+      <dt className="kxd:text-text-muted">{label}</dt>
+      <dd className="kxd:m-0 kxd:text-right kxd:font-mono kxd:tabular-nums">{value}</dd>
     </>
   );
 }
 
 function ArtifactLine({ artifact }: Readonly<{ artifact: ArtifactItem }>) {
   return (
-    <div className="kx:mt-1 kx:flex kx:items-center kx:gap-1.5 kx:text-xs">
-      <span className="kx:inline-flex kx:text-[#0f8f90]">
+    <div className="kxd:mt-1 kxd:flex kxd:items-center kxd:gap-1.5 kxd:text-xs">
+      <span className="kxd:inline-flex kxd:text-[#0f8f90]">
         <AppIcon icon={ArtifactIcon} size="sm" />
       </span>
-      <span className="kx:min-w-0 kx:flex-1 kx:truncate">
-        {artifact.kind} <span className="kx:font-mono">#{artifact.id.slice(0, 8)}</span>
+      <span className="kxd:min-w-0 kxd:flex-1 kxd:truncate">
+        {artifact.kind} <span className="kxd:font-mono">#{artifact.id.slice(0, 8)}</span>
       </span>
-      <span className="kx:font-mono kx:tabular-nums">{formatBytes(artifact.bytes)}</span>
+      <span className="kxd:font-mono kxd:tabular-nums">{formatBytes(artifact.bytes)}</span>
     </div>
   );
 }
@@ -778,19 +785,19 @@ function ArtifactsPanel({
       hint="Stored outside the context; results and the next step see only their ids."
     >
       {model.artifacts.length === 0 ? (
-        <p className="kx:m-0 kx:text-xs kx:text-text-muted">
+        <p className="kxd:m-0 kxd:text-xs kxd:text-text-muted">
           {model.collected
             ? `No artifact writes were traced; the run collected ${model.collected.count}.`
             : "No artifact writes recorded. Runs recorded before artifact tracing, or that changed no files, show none."}
         </p>
       ) : (
-        <table className="kx:w-full kx:border-collapse kx:text-xs">
+        <table className="kxd:w-full kxd:border-collapse kxd:text-xs">
           <thead>
-            <tr className="kx:text-left kx:text-[11px] kx:text-text-muted">
-              <th className="kx:py-1 kx:font-medium">Kind</th>
-              <th className="kx:py-1 kx:font-medium">Id</th>
-              <th className="kx:py-1 kx:font-medium">Written in</th>
-              <th className="kx:py-1 kx:text-right kx:font-medium">Size</th>
+            <tr className="kxd:text-left kxd:text-[11px] kxd:text-text-muted">
+              <th className="kxd:py-1 kxd:font-medium">Kind</th>
+              <th className="kxd:py-1 kxd:font-medium">Id</th>
+              <th className="kxd:py-1 kxd:font-medium">Written in</th>
+              <th className="kxd:py-1 kxd:text-right kxd:font-medium">Size</th>
               <th />
             </tr>
           </thead>
@@ -799,8 +806,8 @@ function ArtifactsPanel({
               const session = model.sessions.find((s) => s.sessionId === artifact.sessionId);
               return (
                 <tr key={artifact.spanId} className={borderB}>
-                  <td className="kx:py-1">{artifact.kind}</td>
-                  <td className="kx:py-1 kx:font-mono">
+                  <td className="kxd:py-1">{artifact.kind}</td>
+                  <td className="kxd:py-1 kxd:font-mono">
                     <Tooltip
                       title={[
                         artifact.id,
@@ -814,15 +821,15 @@ function ArtifactsPanel({
                       {artifact.id.slice(0, 12)}
                     </Tooltip>
                   </td>
-                  <td className="kx:py-1 kx:text-text-muted">
+                  <td className="kxd:py-1 kxd:text-text-muted">
                     {artifact.turn !== null
                       ? `“${session?.step ?? "?"}” T${artifact.turn}`
                       : "workflow"}
                   </td>
-                  <td className="kx:py-1 kx:text-right kx:font-mono kx:tabular-nums">
+                  <td className="kxd:py-1 kxd:text-right kxd:font-mono kxd:tabular-nums">
                     {formatBytes(artifact.bytes)}
                   </td>
-                  <td className="kx:py-1 kx:text-right">
+                  <td className="kxd:py-1 kxd:text-right">
                     <Button size="small" type="link" onClick={() => onOpenTrace(artifact.spanId)}>
                       trace
                     </Button>
@@ -834,7 +841,7 @@ function ArtifactsPanel({
         </table>
       )}
       {model.collected && (
-        <p className="kx:m-0 kx:mt-2 kx:text-xs kx:text-text-muted">
+        <p className="kxd:m-0 kxd:mt-2 kxd:text-xs kxd:text-text-muted">
           At the end the run returned {model.collected.count} artifact reference
           {model.collected.count === 1 ? "" : "s"} with its result.
         </p>
@@ -849,7 +856,7 @@ function MachineryPanel({
   onOpenTrace,
 }: Readonly<{ model: ContextModel; onOpenTrace: (spanId: string) => void }>) {
   return (
-    <div className="kx:grid kx:grid-cols-1 kx:gap-2 kx:xl:grid-cols-2">
+    <div className="kxd:grid kxd:grid-cols-1 kxd:gap-2 kxd:xl:grid-cols-2">
       <Panel
         icon={ContextIcon}
         color="#7c6fd6"
@@ -857,7 +864,7 @@ function MachineryPanel({
         hint="kushibot ContextCompressionService · AgentContextComposer"
       >
         {model.compressions.length === 0 && model.compositions.length === 0 ? (
-          <p className="kx:m-0 kx:text-xs kx:text-text-muted">
+          <p className="kxd:m-0 kxd:text-xs kxd:text-text-muted">
             Not used by this agent. Its sessions append every action and result to one growing
             conversation
             {model.limitHits
@@ -867,13 +874,13 @@ function MachineryPanel({
             summary artifact.
           </p>
         ) : (
-          <ul className="kx:m-0 kx:flex kx:list-none kx:flex-col kx:gap-2 kx:p-0">
+          <ul className="kxd:m-0 kxd:flex kxd:list-none kxd:flex-col kxd:gap-2 kxd:p-0">
             {model.compressions.map((item) => (
-              <li key={item.spanId} className="kx:text-xs">
+              <li key={item.spanId} className="kxd:text-xs">
                 <button
                   type="button"
                   onClick={() => onOpenTrace(item.spanId)}
-                  className="kx:cursor-pointer kx:border-0 kx:bg-transparent kx:p-0 kx:text-left kx:text-text kx:hover:text-primary"
+                  className="kxd:cursor-pointer kxd:border-0 kxd:bg-transparent kxd:p-0 kxd:text-left kxd:text-text kxd:hover:text-primary"
                 >
                   <b>Compression {item.state}</b>
                   {item.code && ` (${item.code})`}
@@ -885,7 +892,7 @@ function MachineryPanel({
                   />
                 )}
                 {item.replaced.length > 0 && (
-                  <div className="kx:text-text-muted">
+                  <div className="kxd:text-text-muted">
                     {item.replaced.length} observations → 1 summary (
                     {item.metrics.summaryPoints ?? "?"} points)
                   </div>
@@ -893,16 +900,16 @@ function MachineryPanel({
               </li>
             ))}
             {model.compositions.map((item) => (
-              <li key={item.spanId} className="kx:text-xs">
+              <li key={item.spanId} className="kxd:text-xs">
                 <button
                   type="button"
                   onClick={() => onOpenTrace(item.spanId)}
-                  className="kx:cursor-pointer kx:border-0 kx:bg-transparent kx:p-0 kx:text-left kx:text-text kx:hover:text-primary"
+                  className="kxd:cursor-pointer kxd:border-0 kxd:bg-transparent kxd:p-0 kxd:text-left kxd:text-text kxd:hover:text-primary"
                 >
                   <b>Composition {item.state}</b>
                   {item.code && ` (${item.code})`}
                 </button>
-                <div className="kx:text-text-muted">
+                <div className="kxd:text-text-muted">
                   {item.included.length} fragments in · {item.dropped.length} dropped to fit ·{" "}
                   {item.omitted.length} not chosen
                   {item.metrics.tokenUpperBound !== undefined &&
@@ -920,18 +927,18 @@ function MachineryPanel({
         hint="kushibot's MemoryRetrievalService"
       >
         {model.recalls.length === 0 ? (
-          <p className="kx:m-0 kx:text-xs kx:text-text-muted">
+          <p className="kxd:m-0 kxd:text-xs kxd:text-text-muted">
             Not used by this agent: no memories from earlier runs were recalled. Within a run, the
             only memory is each session's notebook and the conversation itself.
           </p>
         ) : (
-          <ul className="kx:m-0 kx:flex kx:list-none kx:flex-col kx:gap-1 kx:p-0">
+          <ul className="kxd:m-0 kxd:flex kxd:list-none kxd:flex-col kxd:gap-1 kxd:p-0">
             {model.recalls.map((item) => (
-              <li key={item.spanId} className="kx:text-xs">
+              <li key={item.spanId} className="kxd:text-xs">
                 <button
                   type="button"
                   onClick={() => onOpenTrace(item.spanId)}
-                  className="kx:cursor-pointer kx:border-0 kx:bg-transparent kx:p-0 kx:text-left kx:text-text kx:hover:text-primary"
+                  className="kxd:cursor-pointer kxd:border-0 kxd:bg-transparent kxd:p-0 kxd:text-left kxd:text-text kxd:hover:text-primary"
                 >
                   “{item.topic ?? "?"}”: {item.recalled.length} recalled, {item.skipped.length}{" "}
                   stale
@@ -948,22 +955,22 @@ function MachineryPanel({
 function BeforeAfter({ before, after }: Readonly<{ before: number; after: number }>) {
   const max = Math.max(before, after, 1);
   return (
-    <div className="kx:mt-1 kx:flex kx:flex-col kx:gap-0.5">
+    <div className="kxd:mt-1 kxd:flex kxd:flex-col kxd:gap-0.5">
       {(
         [
           ["before", before, "#8a8fa8"],
           ["after", after, "#7c6fd6"],
         ] as const
       ).map(([label, value, color]) => (
-        <div key={label} className="kx:flex kx:items-center kx:gap-2">
-          <span className="kx:w-10 kx:text-text-muted">{label}</span>
-          <span className="kx:h-2 kx:flex-1 kx:overflow-hidden kx:rounded-full kx:bg-fill">
+        <div key={label} className="kxd:flex kxd:items-center kxd:gap-2">
+          <span className="kxd:w-10 kxd:text-text-muted">{label}</span>
+          <span className="kxd:h-2 kxd:flex-1 kxd:overflow-hidden kxd:rounded-full kxd:bg-fill">
             <span
-              className="kx:block kx:h-full kx:rounded-full"
+              className="kxd:block kxd:h-full kxd:rounded-full"
               style={{ width: `${(value / max) * 100}%`, background: color }}
             />
           </span>
-          <span className="kx:w-16 kx:text-right kx:font-mono kx:tabular-nums">
+          <span className="kxd:w-16 kxd:text-right kxd:font-mono kxd:tabular-nums">
             {formatCount(value)}
           </span>
         </div>
@@ -986,13 +993,15 @@ function Panel({
   children: ReactNode;
 }>) {
   return (
-    <section className={`kx:mt-2 kx:rounded-lg kx:px-3 kx:py-2 ${borderAll}`}>
-      <h3 className="kx:m-0 kx:mb-1.5 kx:flex kx:flex-wrap kx:items-center kx:gap-x-1.5 kx:text-[13px] kx:font-semibold">
-        <span className="kx:inline-flex" style={{ color }}>
+    <section className={`kxd:mt-2 kxd:rounded-lg kxd:px-3 kxd:py-2 ${borderAll}`}>
+      <h3 className="kxd:m-0 kxd:mb-1.5 kxd:flex kxd:flex-wrap kxd:items-center kxd:gap-x-1.5 kxd:text-[13px] kxd:font-semibold">
+        <span className="kxd:inline-flex" style={{ color }}>
           <AppIcon icon={icon} size="sm" />
         </span>
         {title}
-        <span className="kx:min-w-0 kx:text-[11px] kx:font-normal kx:break-words kx:text-text-muted">{hint}</span>
+        <span className="kxd:min-w-0 kxd:text-[11px] kxd:font-normal kxd:break-words kxd:text-text-muted">
+          {hint}
+        </span>
       </h3>
       {children}
     </section>

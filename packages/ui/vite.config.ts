@@ -13,6 +13,8 @@ export default defineConfig({
   resolve: {
     dedupe: ["react", "react-dom", "antd"],
     alias: {
+      "@kushex/debug-events/style.css": new URL("../debug-events/src/style.css", import.meta.url).pathname,
+      "@kushex/debug-events": new URL("../debug-events/src/index.ts", import.meta.url).pathname,
       "@kushex/ui": new URL("./src/index.ts", import.meta.url).pathname,
     },
   },

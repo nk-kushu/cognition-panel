@@ -77,7 +77,15 @@ describe("backend preferences", () => {
     const store = makeStore({});
     store.dispatch(settingsRequested());
     store.dispatch(editorFontSizeChanged(20));
-    load.resolve(response({ colorMode: "dark", density: "compact", editorFontSize: 16, noteFontSize: 13 }));
+    load.resolve(
+      response({
+        colorMode: "dark",
+        density: "compact",
+        editorFontSize: 16,
+        noteFontSize: 13,
+        markdownPreviewFontSize: 13,
+      }),
+    );
     await waitFor(() => expect(store.getState().settings.colorMode).toBe("dark"));
     expect(store.getState().settings.editorFontSize).toBe(20);
     await waitFor(() => expect(patches).toEqual([{ editorFontSize: 20 }]));
@@ -85,7 +93,15 @@ describe("backend preferences", () => {
     const untouched = makeStore({});
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => response({ colorMode: "dark", density: "compact", editorFontSize: 16, noteFontSize: 13 })),
+      vi.fn(async () =>
+        response({
+          colorMode: "dark",
+          density: "compact",
+          editorFontSize: 16,
+          noteFontSize: 13,
+          markdownPreviewFontSize: 13,
+        }),
+      ),
     );
     untouched.dispatch(settingsRequested());
     await waitFor(() => expect(untouched.getState().settings.editorFontSize).toBe(16));
@@ -114,6 +130,7 @@ describe("backend preferences", () => {
       density: "comfortable",
       editorFontSize: 13,
       noteFontSize: 13,
+      markdownPreviewFontSize: 13,
       splitterSizes: {},
     };
     const first = deferred<void>();
@@ -141,6 +158,7 @@ describe("backend preferences", () => {
         density: "compact",
         editorFontSize: 13,
         noteFontSize: 13,
+        markdownPreviewFontSize: 13,
         splitterSizes: {},
       }),
     );
@@ -163,7 +181,13 @@ describe("backend preferences", () => {
         if (!available) return response({ message: "Unavailable" }, 503);
         if (request.method === "PATCH")
           patches.push((await request.json()) as UpdateUserSettingsRequest);
-        return response({ colorMode: "system", density: "comfortable", editorFontSize: 13, noteFontSize: 13 });
+        return response({
+          colorMode: "system",
+          density: "comfortable",
+          editorFontSize: 13,
+          noteFontSize: 13,
+          markdownPreviewFontSize: 13,
+        });
       }),
     );
     const store = makeStore({});
@@ -181,6 +205,7 @@ describe("backend preferences", () => {
         density: "comfortable",
         editorFontSize: 13,
         noteFontSize: 13,
+        markdownPreviewFontSize: 13,
         splitterSizes: {},
         loadError: false,
         saveError: false,
@@ -204,6 +229,7 @@ describe("backend preferences", () => {
           density: "comfortable",
           editorFontSize: 13,
           noteFontSize: 13,
+          markdownPreviewFontSize: 13,
           splitterSizes: {},
         });
       }),
@@ -217,6 +243,7 @@ describe("backend preferences", () => {
         density: "comfortable",
         editorFontSize: 13,
         noteFontSize: 13,
+        markdownPreviewFontSize: 13,
         splitterSizes: { files: [0.8, 0.2], notes: [0.3, 0.7] },
       }),
     );

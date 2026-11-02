@@ -23,6 +23,7 @@ describe("mountKushex", () => {
     const { el } = mount();
     expect(el.shadowRoot!.querySelector("style[data-kushex]")?.textContent).toContain("kx\\:flex");
     expect(within(shadowOf(el)).getByRole("heading", { name: "Projects" })).toBeInTheDocument();
+    expect(el.shadowRoot!.querySelector("style[data-kushex]")?.textContent).toContain("kxd\\:flex");
     expect(document.body.querySelector("h3")).toBeNull();
   });
 

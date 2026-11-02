@@ -26,6 +26,7 @@ export class SettingsController implements HttpController {
               density: z.enum(["comfortable", "compact"]).optional(),
               editorFontSize: z.number().int().min(10).max(28).optional(),
               noteFontSize: z.number().int().min(10).max(28).optional(),
+              markdownPreviewFontSize: z.number().int().min(10).max(28).optional(),
               splitterSizes: z
                 .record(
                   z.string().regex(/^[a-z0-9:-]{1,64}$/),

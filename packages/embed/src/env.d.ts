@@ -7,3 +7,8 @@ declare module "@kushex/ui/preflight.css?inline" {
   const css: string;
   export default css;
 }
+
+declare module "@kushex/debug-events/style.css?inline" {
+  const css: string;
+  export default css;
+}

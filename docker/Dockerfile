@@ -12,6 +12,7 @@ RUN npm install --global pnpm@9.12.1
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/standalone/package.json apps/standalone/package.json
 COPY packages/ui/package.json packages/ui/package.json
+COPY packages/debug-events/package.json packages/debug-events/package.json
 COPY packages/embed/package.json packages/embed/package.json
 COPY packages/server/package.json packages/server/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
@@ -24,6 +25,7 @@ RUN pnpm install --frozen-lockfile
 # Agent sources are mounted at /plugins, so Node looks for dependencies at /node_modules.
 RUN ln -s /app/node_modules /node_modules
 COPY . .
+RUN pnpm --filter @kushex/debug-events build
 
 FROM development AS frontend-build
 RUN pnpm --filter @kushex/standalone build

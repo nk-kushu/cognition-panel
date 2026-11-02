@@ -38,11 +38,11 @@ for DTOs, pagination, preview limits, containment, and Origin/Host configuration
 ## User settings
 
 `GET /settings` returns
-`{ "colorMode": "system", "density": "comfortable", "editorFontSize": 13, "noteFontSize": 13, "splitterSizes": {} }`
+`{ "colorMode": "system", "density": "comfortable", "editorFontSize": 13, "noteFontSize": 13, "markdownPreviewFontSize": 13, "splitterSizes": {} }`
 by default when no settings have been saved. `PATCH /settings` accepts any of
 those fields: `colorMode` (`system`, `light`, `dark`), `density` (`comfortable`,
 `compact`), `editorFontSize` (a whole number of pixels from 10 to 28, for every
-Monaco editor in the panel), `noteFontSize` (the same range, for the code notes
+Monaco editor in the panel), `markdownPreviewFontSize` (the same range, for rendered Markdown files), `noteFontSize` (the same range, for the code notes
 of the agent editor), and `splitterSizes`. It returns the complete
 settings. Empty bodies, unknown fields, nulls, and unsupported values are
 rejected with `400`.

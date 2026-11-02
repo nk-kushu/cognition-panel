@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { recorded } from "../../test/debugEvents";
+import { recorded } from "./test/debugEvents";
 import { executionDetails } from "./executionContent";
 
 it("reassembles out-of-order prompt chunks and preserves Unicode and newlines", () => {

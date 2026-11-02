@@ -6,7 +6,7 @@ and contributes agent `coding`. Cognition Panel discovers it through `KUSHEX_PLU
 The agent runs as a kushibot workflow. It either answers a question read-only or takes a
 code change through investigation, planning, tests, a skeleton you approve, implementation,
 guards and tests. The design is in
-[`docs/ideas/coding-agent`](../../docs/ideas/coding-agent/coding-agent-workflow.md).
+[`docs/coding-agent-workflow.md`](docs/coding-agent-workflow.md).
 
 ## Folder structure
 

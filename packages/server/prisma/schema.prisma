@@ -100,6 +100,7 @@ model UserSettings {
   editorFontSize Int       @default(13)
   /// Pixels, for the code notes of the agent editor.
   noteFontSize   Int       @default(13)
+  markdownPreviewFontSize   Int       @default(13)
   /// Splitter id → panel fractions; PATCH merges by id.
   splitterSizes  Json      @default("{}")
   updatedAt      DateTime  @updatedAt

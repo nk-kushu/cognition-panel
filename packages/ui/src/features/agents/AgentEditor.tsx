@@ -1,3 +1,4 @@
+import { selectMarkdownPreviewFontSize } from "../settings/settingsSlice";
 import type { OnMount } from "@monaco-editor/react";
 import type { editor, IPosition, IRange, Uri } from "monaco-editor";
 import {
@@ -718,6 +719,7 @@ function AgentWorkspace({
   };
   const pathParts = (library ? library.path : active).split("/").filter(Boolean);
   const markdownFile = !library && current?.kind === "text" && isMarkdown(active);
+  const markdownPreviewFontSize = useAppSelector(selectMarkdownPreviewFontSize);
   const previewing = markdownFile && !editingMarkdown.has(active);
 
   const tabStrip = openTabs.length > 0 && (
@@ -951,7 +953,11 @@ function AgentWorkspace({
               className="kx:absolute kx:inset-0 kx:z-10 kx:overflow-auto kx:bg-surface kx:px-6 kx:py-4"
             >
               {drafts[active]?.trim() ? (
-                <Markdown text={drafts[active]} className="kx:mx-auto kx:max-w-3xl" />
+                <Markdown
+                  style={{ fontSize: markdownPreviewFontSize }}
+                  text={drafts[active]}
+                  className="kx:mx-auto kx:max-w-3xl"
+                />
               ) : (
                 <Typography.Text type="secondary">This file is empty.</Typography.Text>
               )}

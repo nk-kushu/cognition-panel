@@ -1,8 +1,19 @@
-import type { SplitterSizesDto, UserSettingsDto, UpdateUserSettingsRequest } from "@kushex/contracts";
+import type {
+  SplitterSizesDto,
+  UserSettingsDto,
+  UpdateUserSettingsRequest,
+} from "@kushex/contracts";
 import type { PrismaClient } from "../../../generated/prisma/client.js";
 import type { SettingsRepository } from "../application/SettingsRepository.js";
 
-const select = { colorMode: true, density: true, editorFontSize: true, noteFontSize: true, splitterSizes: true } as const;
+const select = {
+  colorMode: true,
+  density: true,
+  editorFontSize: true,
+  noteFontSize: true,
+  markdownPreviewFontSize: true,
+  splitterSizes: true,
+} as const;
 
 type Row = Omit<UserSettingsDto, "splitterSizes"> & { splitterSizes: unknown };
 
@@ -20,7 +31,10 @@ export class PrismaSettingsRepository implements SettingsRepository {
     return row && toDto(row);
   }
 
-  update(actorId: string, { splitterSizes, ...fields }: UpdateUserSettingsRequest): Promise<UserSettingsDto> {
+  update(
+    actorId: string,
+    { splitterSizes, ...fields }: UpdateUserSettingsRequest,
+  ): Promise<UserSettingsDto> {
     return this.client.$transaction(async (tx) => {
       if (splitterSizes) {
         // jsonb `||` merges by splitter id in one statement, so concurrent saves of different splitters both land.

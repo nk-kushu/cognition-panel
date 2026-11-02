@@ -236,3 +236,34 @@ it("adds a general note that is not tied to any code", async () => {
   // It marks no file in the tree.
   expect(screen.queryByRole("treeitem", { name: /has notes/, hidden: true })).toBeNull();
 });
+
+it("opens Markdown in preview using its saved font size and keeps Edit available", async () => {
+  mockKushexApi(
+    [],
+    [
+      {
+        ...exampleAgent,
+        files: [...exampleAgent.files, textFile("workflow.md", "# Workflow\n\nStart here.")],
+      },
+    ],
+  );
+  await fetch(
+    new Request(new URL("/settings", location.href), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ markdownPreviewFontSize: 22, editorFontSize: 14 }),
+    }),
+  );
+  const user = userEvent.setup();
+  render(<KushexPanel initialPath="/agents/reviewer" />);
+  const tree = await screen.findByRole("tree", { name: "Agent files" });
+  await user.click(within(tree).getByText("workflow.md"));
+  const preview = await screen.findByRole("document", { name: "workflow.md preview" });
+  expect(within(preview).getByRole("heading", { name: "Workflow" })).toBeInTheDocument();
+  await waitFor(() =>
+    expect(preview.querySelector(".kx-markdown")).toHaveStyle({ fontSize: "22px" }),
+  );
+  await user.click(screen.getByText("Edit", { exact: true }));
+  expect(screen.queryByRole("document", { name: "workflow.md preview" })).not.toBeInTheDocument();
+  expect(screen.getByLabelText("workflow.md in reviewer")).toHaveAttribute("data-font-size", "14");
+});

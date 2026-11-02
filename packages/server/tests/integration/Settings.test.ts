@@ -18,6 +18,7 @@ beforeEach(async () => {
     "20261025120000_user_settings_splitter_sizes",
     "20261030120000_user_settings_editor_font_size",
     "20261030130000_user_settings_note_font_size",
+    "20261102120000_markdown_preview_font_size",
   ]) {
     await migrator.add(
       migration,
@@ -48,13 +49,21 @@ describe("user settings persistence", () => {
       repository.update("alice", { colorMode: "dark" }),
       repository.update("alice", { density: "compact" }),
     ]);
-    expect(await repository.find("alice")).toEqual({ colorMode: "dark", density: "compact", editorFontSize: 13, noteFontSize: 13, splitterSizes: {} });
+    expect(await repository.find("alice")).toEqual({
+      colorMode: "dark",
+      density: "compact",
+      editorFontSize: 13,
+      noteFontSize: 13,
+      markdownPreviewFontSize: 13,
+      splitterSizes: {},
+    });
     expect(await repository.find("bob")).toBeNull();
     expect(await repository.update("bob", { colorMode: "light" })).toEqual({
       colorMode: "light",
       density: "comfortable",
       editorFontSize: 13,
       noteFontSize: 13,
+      markdownPreviewFontSize: 13,
       splitterSizes: {},
     });
     expect(await repository.update("alice", { colorMode: "system" })).toEqual({
@@ -62,6 +71,7 @@ describe("user settings persistence", () => {
       density: "compact",
       editorFontSize: 13,
       noteFontSize: 13,
+      markdownPreviewFontSize: 13,
       splitterSizes: {},
     });
     await database.stop();
@@ -75,6 +85,7 @@ describe("user settings persistence", () => {
       density: "compact",
       editorFontSize: 13,
       noteFontSize: 13,
+      markdownPreviewFontSize: 13,
       splitterSizes: {},
     });
     expect(await database.client.userSettings.count()).toBe(2);
@@ -100,7 +111,17 @@ describe("user settings persistence", () => {
       density: "compact",
       editorFontSize: 13,
       noteFontSize: 13,
+      markdownPreviewFontSize: 13,
       splitterSizes: { files: [0.6, 0.4], notes: [0.5, 0.5] },
+    });
+  });
+  it("persists the Markdown preview font size independently", async () => {
+    const repository = new PrismaSettingsRepository(database.client);
+    await repository.update("alice", { editorFontSize: 18 });
+    await repository.update("alice", { markdownPreviewFontSize: 22 });
+    expect(await repository.find("alice")).toMatchObject({
+      editorFontSize: 18,
+      markdownPreviewFontSize: 22,
     });
   });
   it("saves the editor font size without touching other settings", async () => {
@@ -111,6 +132,7 @@ describe("user settings persistence", () => {
       density: "comfortable",
       editorFontSize: 18,
       noteFontSize: 13,
+      markdownPreviewFontSize: 13,
       splitterSizes: { files: [0.7, 0.3] },
     });
     expect(await repository.find("alice")).toMatchObject({ editorFontSize: 18 });

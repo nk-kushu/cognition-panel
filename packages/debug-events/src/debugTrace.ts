@@ -1,4 +1,4 @@
-import type { DebugEventDto, RecordedDebugEventDto } from "@kushex/contracts";
+import type { DebugEventDto, RecordedDebugEventDto } from "./types";
 
 /** What a span is in kushibot's harness, from outermost to innermost. */
 export type SpanKind =

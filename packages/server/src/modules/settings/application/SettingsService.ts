@@ -12,6 +12,7 @@ export class SettingsService {
         density: "comfortable",
         editorFontSize: 13,
         noteFontSize: 13,
+        markdownPreviewFontSize: 13,
         splitterSizes: {},
       }
     );

@@ -1,4 +1,4 @@
-import type { DebugEventDto, RecordedDebugEventDto } from "@kushex/contracts";
+import type { DebugEventDto, RecordedDebugEventDto } from "./types";
 
 export type DebugLevel = DebugEventDto["level"];
 export const LEVELS: readonly DebugLevel[] = ["trace", "debug", "info", "warn", "error"];

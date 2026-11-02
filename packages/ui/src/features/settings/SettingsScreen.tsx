@@ -9,6 +9,8 @@ import {
   editorFontSizeChanged,
   FONT_SIZE_RANGE,
   noteFontSizeChanged,
+  markdownPreviewFontSizeChanged,
+  selectMarkdownPreviewFontSize,
   selectColorMode,
   selectDensity,
   selectEditorFontSize,
@@ -58,6 +60,7 @@ function AppearanceFields() {
 function EditorFields() {
   const dispatch = useAppDispatch();
   const editorFontSize = useAppSelector(selectEditorFontSize);
+  const markdownPreviewFontSize = useAppSelector(selectMarkdownPreviewFontSize);
   const noteFontSize = useAppSelector(selectNoteFontSize);
   return (
     <>
@@ -74,6 +77,22 @@ function EditorFields() {
           value={editorFontSize}
           onChange={(size) => {
             if (size !== null) dispatch(editorFontSizeChanged(size));
+          }}
+        />
+      </Form.Item>
+      <Form.Item
+        label="Markdown preview font size"
+        htmlFor="markdown-preview-font-size"
+        extra="Applies to rendered Markdown files, independently of the code editor."
+      >
+        <InputNumber
+          id="markdown-preview-font-size"
+          {...FONT_SIZE_RANGE}
+          precision={0}
+          suffix="px"
+          value={markdownPreviewFontSize}
+          onChange={(size) => {
+            if (size !== null) dispatch(markdownPreviewFontSizeChanged(size));
           }}
         />
       </Form.Item>

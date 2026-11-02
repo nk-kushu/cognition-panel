@@ -1,3 +1,5 @@
+import { Children, isValidElement, type ReactNode } from "react";
+import { MermaidDiagram } from "./MermaidDiagram";
 import type { CSSProperties } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -22,10 +24,25 @@ export function Markdown({
   breaks?: boolean;
 }>) {
   return (
-    <div className={`kx-markdown ${inverted ? "kx-markdown-inverted" : ""} ${className}`} style={style}>
+    <div
+      className={`kx-markdown ${inverted ? "kx-markdown-inverted" : ""} ${className}`}
+      style={style}
+    >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          pre: ({ node: _node, children, ...props }) => {
+            const child = Children.toArray(children)[0];
+            if (
+              isValidElement<{ className?: string; children?: ReactNode }>(child) &&
+              /(?:^|\s)language-mermaid(?:\s|$)/i.test(child.props.className ?? "")
+            ) {
+              return (
+                <MermaidDiagram source={String(child.props.children ?? "").replace(/\n$/, "")} />
+              );
+            }
+            return <pre {...props}>{children}</pre>;
+          },
           a: ({ node: _node, children, ...props }) => (
             <a {...props} target="_blank" rel="noreferrer">
               {children}

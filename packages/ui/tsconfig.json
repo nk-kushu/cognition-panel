@@ -1,11 +1,24 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["vite/client", "vitest/globals"],
+    "types": [
+      "vite/client",
+      "vitest/globals"
+    ],
     "paths": {
-      "antd": ["./node_modules/antd"],
-      "@kushex/ui": ["./src/index.ts"]
+      "antd": [
+        "./node_modules/antd"
+      ],
+      "@kushex/ui": [
+        "./src/index.ts"
+      ],
+      "@kushex/debug-events": [
+        "../debug-events/src/index.ts"
+      ]
     }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": [
+    "src",
+    "vite.config.ts"
+  ]
 }

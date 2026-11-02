@@ -1,4 +1,4 @@
-import type { DebugEventDto, RecordedDebugEventDto } from "@kushex/contracts";
+import type { DebugEventDto, RecordedDebugEventDto } from "./types";
 import { parseRefs, type TraceNode } from "./debugTrace";
 
 /**

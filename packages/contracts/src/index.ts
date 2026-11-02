@@ -36,6 +36,8 @@ export type UserSettingsDto = Readonly<{
   editorFontSize: number;
   /** Pixels, for the code notes of the agent editor. */
   noteFontSize: number;
+  /** Pixels, for rendered Markdown files, independent of Monaco. */
+  markdownPreviewFontSize: number;
   splitterSizes: SplitterSizesDto;
 }>;
 /** `splitterSizes` merges by splitter id: ids left out keep their saved sizes. */

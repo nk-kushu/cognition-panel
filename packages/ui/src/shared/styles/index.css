@@ -287,3 +287,6 @@
 .kx-markdown-inverted :where(blockquote, th, td, hr) {
   border-color: rgb(255 255 255 / 0.45);
 }
+
+.kx-mermaid { overflow: auto; margin-bottom: 0.75em; }
+.kx-mermaid svg { display: block; max-width: 100%; height: auto; margin: auto; }

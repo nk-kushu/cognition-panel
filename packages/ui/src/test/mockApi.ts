@@ -95,6 +95,7 @@ export function mockKushexApi(
     density: "comfortable",
     editorFontSize: 13,
     noteFontSize: 13,
+    markdownPreviewFontSize: 13,
     splitterSizes: {},
   };
   const files: Record<string, FileContentDto> = {

@@ -1,4 +1,4 @@
-import type { RecordedDebugEventDto } from "@kushex/contracts";
+import type { RecordedDebugEventDto } from "./types";
 
 export type ExecutionDetail = { stage: string; text: string; complete: boolean };
 
