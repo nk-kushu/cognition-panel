@@ -83,8 +83,11 @@ export class CodingProposals {
   }
 
   private async input(context: RequestContext, projectId: string, runId: string) {
-    const { workspace } = await this.workspaces.forProject(context, projectId);
-    const evidence = await this.threads.codingResult(context, projectId, runId);
+    const { workspaceId, ...evidence } = await this.threads.codingResult(context, projectId, runId);
+    const { workspace } = await this.workspaces.forProject(
+      { ...context, ...(workspaceId ? { workspaceId } : {}) },
+      projectId,
+    );
     const checkout = await this.paths.resolve(workspace.path);
     return {
       id: runId,

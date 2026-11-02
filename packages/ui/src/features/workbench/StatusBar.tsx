@@ -2,9 +2,10 @@ import { Typography } from "antd";
 import { useAppSelector } from "../../app/hooks";
 import { useProjectQuery } from "../../shared/api/kushexApi";
 import { borderT } from "../../shared/lib/styles";
-import { selectProjectId } from "./workbenchSlice";
+import { selectProjectId, selectWorkspaceId } from "./workbenchSlice";
 
 export function StatusBar() {
+  const workspaceId = useAppSelector(selectWorkspaceId);
   const projectId = useAppSelector(selectProjectId);
   const { data: project } = useProjectQuery(projectId ?? "", { skip: !projectId });
   return (
@@ -14,7 +15,7 @@ export function StatusBar() {
     >
       <Typography.Text type="secondary" className="kx:text-xs">
         {project
-          ? `${project.name} · ${project.workspace.path}`
+          ? `${project.name} · ${(project.workspaces.find((workspace) => workspace.id === workspaceId) ?? project.workspace).path}`
           : projectId
             ? "Workspace selected"
             : "no project"}

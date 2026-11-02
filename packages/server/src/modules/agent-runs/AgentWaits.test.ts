@@ -12,6 +12,7 @@ const row = (kind: string, payload: object) => ({
   id: "run",
   projectId: "project",
   actorId: "actor",
+  workspaceId: "original-workspace",
   agentName: "coding",
   threadId: "thread",
   agentRunRef: "agent-run",
@@ -58,7 +59,11 @@ describe("answering a waiting run", () => {
   beforeEach(() => setUp(row("decision", decision)));
 
   it("takes authorized packages from what was asked, and resumes the same run", async () => {
-    await waits.answer(context, "project", "run", { choice: "Package A", text: "" });
+    await waits.answer({ ...context, workspaceId: "different-workspace" }, "project", "run", {
+      choice: "Package A",
+      text: "",
+    });
+    expect(launch.mock.calls[0]![0]).toMatchObject({ workspaceId: "original-workspace" });
     const [, , request, resume] = launch.mock.calls[0]!;
     expect(request).toMatchObject({ agentName: "coding", threadId: "thread", debug: false });
     expect(resume).toEqual({

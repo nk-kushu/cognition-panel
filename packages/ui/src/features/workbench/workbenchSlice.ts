@@ -12,6 +12,7 @@ export type FileTab = Readonly<{
 
 type WorkbenchState = {
   projectId: string | null;
+  workspaceId: string | null;
   fileTabs: FileTab[];
   activeFileTab: string | null;
   mobileView: MobileView;
@@ -19,6 +20,7 @@ type WorkbenchState = {
 
 const initialState: WorkbenchState = {
   projectId: null,
+  workspaceId: null,
   fileTabs: [],
   activeFileTab: null,
   mobileView: "main",
@@ -30,11 +32,17 @@ export const workbenchSlice = createSlice({
   reducers: {
     projectOpened(state, action: PayloadAction<string>) {
       if (state.projectId !== action.payload) {
+        state.workspaceId = null;
         state.fileTabs = [];
         state.activeFileTab = null;
       }
       state.projectId = action.payload;
       state.mobileView = "side";
+    },
+    workspaceSelected(state, action: PayloadAction<string>) {
+      state.workspaceId = action.payload;
+      state.fileTabs = [];
+      state.activeFileTab = null;
     },
     fileTabOpened(state, action: PayloadAction<FileTab>) {
       if (!state.fileTabs.some((tab) => tab.key === action.payload.key))
@@ -57,6 +65,7 @@ export const workbenchSlice = createSlice({
     },
   },
   selectors: {
+    selectWorkspaceId: (state) => state.workspaceId,
     selectProjectId: (state) => state.projectId,
     selectFileTabs: (state) => state.fileTabs,
     selectActiveFileTab: (state) => state.activeFileTab,
@@ -66,6 +75,7 @@ export const workbenchSlice = createSlice({
 
 export const {
   projectOpened,
+  workspaceSelected,
   fileTabOpened,
   fileTabActivated,
   fileTabClosed,
@@ -73,6 +83,7 @@ export const {
 } = workbenchSlice.actions;
 export const {
   selectProjectId,
+  selectWorkspaceId,
   selectFileTabs,
   selectActiveFileTab,
   selectMobileView,

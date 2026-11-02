@@ -38,6 +38,7 @@ import type {
   UpdateNoteRequest,
   UpdateUserSettingsRequest,
 } from "@kushex/contracts";
+import type { RootState } from "../../app/store";
 import type { StoreOptions } from "../../app/storeOptions";
 
 export type OpenRouterStatus = Readonly<{ configured: boolean; updatedAt: string | null }>;
@@ -59,6 +60,11 @@ export const kushexApi = createApi({
         globalThis.location?.href ?? "http://localhost",
       ).href,
       cache: "no-store",
+      prepareHeaders: (headers) => {
+        const workspaceId = (api.getState() as RootState).workbench.workspaceId;
+        if (workspaceId) headers.set("X-Workspace-Id", workspaceId);
+        return headers;
+      },
     })(args, api, extraOptions);
   },
   tagTypes: [
@@ -152,6 +158,14 @@ export const kushexApi = createApi({
     projects: build.query<Page<ProjectDto>, number>({
       query: (offset) => ({ url: "/projects", params: { offset } }),
       providesTags: ["Projects"],
+    }),
+    addWorkspace: build.mutation<ProjectDto, { projectId: string; path: string }>({
+      query: ({ projectId, path }) => ({
+        url: `/projects/${encodeURIComponent(projectId)}/workspaces`,
+        method: "POST",
+        body: { path },
+      }),
+      invalidatesTags: ["Projects"],
     }),
     createProject: build.mutation<ProjectDto, CreateProjectRequest>({
       query: (body) => ({ url: "/projects", method: "POST", body }),
@@ -416,6 +430,7 @@ export const {
   useProjectQuery,
   useProjectsQuery,
   useCreateProjectMutation,
+  useAddWorkspaceMutation,
   useLocationsQuery,
   useTreeQuery,
   useLazyTreeQuery,

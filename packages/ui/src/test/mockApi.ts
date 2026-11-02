@@ -19,6 +19,9 @@ export const exampleProject: ProjectDto = {
   name: "Project one",
   description: null,
   createdAt: "2026-10-23T00:00:00.000Z",
+  workspaces: [
+    { id: "22222222-2222-4222-8222-222222222222", path: "alpha", branch: null, revision: null },
+  ],
   workspace: {
     id: "22222222-2222-4222-8222-222222222222",
     path: "alpha",
@@ -378,12 +381,28 @@ export function mockKushexApi(
       if (action === "breakpoints") return respond({ breakpoints: [] });
       return new Response(null, { status: 204 });
     }
+    const addWorkspace = /^\/projects\/([^/]+)\/workspaces$/.exec(route);
+    if (addWorkspace && request.method === "POST") {
+      const index = projects.findIndex((project) => project.id === addWorkspace[1]);
+      if (index < 0) return respond({ message: "Project not found." }, 404);
+      const project = projects[index]!;
+      const body = (await request.json()) as { path: string };
+      const workspace = {
+        id: "44444444-4444-4444-8444-444444444444",
+        path: body.path,
+        branch: null,
+        revision: null,
+      };
+      projects[index] = { ...project, workspaces: [...project.workspaces, workspace] };
+      return respond(projects[index], 201);
+    }
     if (route === "/projects" && request.method === "POST") {
       const body = (await request.json()) as { name: string; path: string };
       const project = {
         ...exampleProject,
         name: body.name,
         workspace: { ...exampleProject.workspace, path: body.path },
+        workspaces: [{ ...exampleProject.workspace, path: body.path }],
       };
       projects.push(project);
       return respond(project, 201);

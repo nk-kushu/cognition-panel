@@ -1,9 +1,8 @@
 import { Alert, Select, Tabs, Typography, theme } from "antd";
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { WorkflowPanel } from "../WorkflowPanel";
 import type { WorkflowSelection } from "../types";
-import { OpenRouterApiContext, OpenRouterModelsContext, type OpenRouterModel } from "../OpenRouter";
-import { OpenRouterApi } from "../OpenRouterApi";
+import { OpenRouterApiContext, OpenRouterCatalogProvider } from "../OpenRouter";
 import { DefinitionsPanel } from "./DefinitionsPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import { SettingsPanel } from "./SettingsPanel";
@@ -167,7 +166,12 @@ const styles = `
 export function AgentSettingsPanel({ config }: AgentSettingsPanelProps) {
   return (
     <AgentSettingsPanelContent
-      key={JSON.stringify([config.apiBaseUrl, config.projectId, config.agentId])}
+      key={JSON.stringify([
+        config.apiBaseUrl,
+        config.projectId,
+        config.workspaceId,
+        config.agentId,
+      ])}
       config={config}
     />
   );
@@ -176,8 +180,8 @@ export function AgentSettingsPanel({ config }: AgentSettingsPanelProps) {
 function AgentSettingsPanelContent({ config }: AgentSettingsPanelProps) {
   const { schema, projectId, apiBaseUrl, disabled = false } = config;
   const api = useMemo(
-    () => new HttpAgentSettingsApi(apiBaseUrl, projectId, config.agentId),
-    [apiBaseUrl, projectId, config.agentId],
+    () => new HttpAgentSettingsApi(apiBaseUrl, projectId, config.agentId, config.workspaceId),
+    [apiBaseUrl, projectId, config.agentId, config.workspaceId],
   );
   const store = useAgentSettings(api, config.defaults);
   const definitions = useAgentDefinitions(api);
@@ -189,23 +193,6 @@ function AgentSettingsPanelContent({ config }: AgentSettingsPanelProps) {
   const { token } = theme.useToken();
   const [tab, setTab] = useState<Section>("workflow");
   const [selection, setSelection] = useState<WorkflowSelection>({ kind: "graph" });
-  const [models, setModels] = useState<readonly OpenRouterModel[]>([]);
-  useEffect(() => {
-    let active = true;
-    const api = new OpenRouterApi(apiBaseUrl);
-    void api
-      .status()
-      .then((status) => (status.configured ? api.models() : []))
-      .then((catalog) => {
-        if (active) setModels(catalog);
-      })
-      .catch(() => {
-        if (active) setModels([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, [apiBaseUrl]);
   const select = (next: WorkflowSelection) => {
     setSelection(
       next.kind === "step" && !schema.steps.some((step) => step.id === next.id)
@@ -285,7 +272,7 @@ function AgentSettingsPanelContent({ config }: AgentSettingsPanelProps) {
   return (
     <SettingsSchemaContext.Provider value={schema}>
       <OpenRouterApiContext.Provider value={apiBaseUrl}>
-        <OpenRouterModelsContext.Provider value={models}>
+        <OpenRouterCatalogProvider>
           <div className="agent-config" style={colors}>
             <style>{styles}</style>
             <div className="agent-config-top">
@@ -357,7 +344,7 @@ function AgentSettingsPanelContent({ config }: AgentSettingsPanelProps) {
               />
             </div>
           </div>
-        </OpenRouterModelsContext.Provider>
+        </OpenRouterCatalogProvider>
       </OpenRouterApiContext.Provider>
     </SettingsSchemaContext.Provider>
   );

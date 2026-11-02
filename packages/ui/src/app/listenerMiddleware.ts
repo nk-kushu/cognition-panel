@@ -15,6 +15,7 @@ import {
 import { addRunListeners } from "../features/runs/runListeners";
 import { kushexApi } from "../shared/api/kushexApi";
 import type { AppDispatch, RootState } from "./store";
+import { workspaceSelected } from "../features/workbench/workbenchSlice";
 import type { StoreOptions } from "./storeOptions";
 
 /** Hydration and save ordering belong to one panel store. */
@@ -106,6 +107,13 @@ export function createListeners(options: StoreOptions = {}) {
           api.dispatch(settingsSaveErrorChanged(failed.size > 0));
         }
       });
+    },
+  });
+
+  startListening({
+    actionCreator: workspaceSelected,
+    effect: (_action, api) => {
+      api.dispatch(kushexApi.util.resetApiState());
     },
   });
 

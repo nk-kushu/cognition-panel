@@ -7,6 +7,7 @@ import { RequestModeContext } from "./RequestModeContext";
 export function AgentSettingsHost({
   config,
   projectId,
+  workspaceId,
   apiBaseUrl,
   disabled,
   value,
@@ -14,6 +15,7 @@ export function AgentSettingsHost({
 }: Readonly<{
   config: AgentSettingsConfiguration;
   projectId: string;
+  workspaceId?: string;
   apiBaseUrl: string;
   disabled: boolean;
   value: Readonly<Record<string, JsonValue>>;
@@ -26,7 +28,7 @@ export function AgentSettingsHost({
         change: (mode) => onChange({ ...value, mode }),
       }}
     >
-      <AgentSettingsPanel config={{ ...config, projectId, apiBaseUrl, disabled }} />
+      <AgentSettingsPanel config={{ ...config, projectId, workspaceId, apiBaseUrl, disabled }} />
     </RequestModeContext.Provider>
   );
 }

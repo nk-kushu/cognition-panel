@@ -32,8 +32,7 @@ const MAX_DEFINITIONS = 128;
 
 /**
  * PostgreSQL settings, skills and guards scoped by authorized project and plugin agent type.
- * Workspace.projectId is unique: each project owns exactly one workspace, so project scope
- * also isolates workspace data without storing a second, potentially conflicting workspace ID.
+ * Settings and definitions are isolated by project, workspace and agent type.
  */
 export class AgentConfigService implements AgentHostContext {
   constructor(
@@ -48,9 +47,9 @@ export class AgentConfigService implements AgentHostContext {
     projectId: string,
     agentType: string,
   ): Promise<AgentSettingsDto> {
-    await this.projects.find(context, projectId);
+    const workspaceId = await this.workspaceId(context, projectId);
     const row = await this.db.agentProjectSettings.findUnique({
-      where: { projectId_agentType: { projectId, agentType } },
+      where: { projectId_workspaceId_agentType: { projectId, workspaceId, agentType } },
     });
     return {
       settings: (row?.settings ?? {}) as AgentConfiguration,
@@ -65,17 +64,17 @@ export class AgentConfigService implements AgentHostContext {
     settings: AgentConfiguration,
     baseRevision: number,
   ): Promise<AgentSettingsDto> {
-    await this.projects.find(context, projectId);
+    const workspaceId = await this.workspaceId(context, projectId);
     const value = this.validated(SETTINGS[agentType], settings, "settings");
     if (baseRevision === 0) {
       const created = await this.db.agentProjectSettings.createMany({
-        data: { projectId, agentType, settings: value },
+        data: { projectId, workspaceId, agentType, settings: value },
         skipDuplicates: true,
       });
       if (created.count === 0) throw new ConflictError("These settings changed; reload them.");
     } else {
       const { count } = await this.db.agentProjectSettings.updateMany({
-        where: { projectId, agentType, revision: baseRevision },
+        where: { projectId, workspaceId, agentType, revision: baseRevision },
         data: { settings: value, revision: { increment: 1 } },
       });
       if (count === 0) throw new ConflictError("These settings changed; reload them.");
@@ -88,9 +87,9 @@ export class AgentConfigService implements AgentHostContext {
     projectId: string,
     agentType: string,
   ): Promise<readonly AgentDefinitionDto[]> {
-    await this.projects.find(context, projectId);
+    const workspaceId = await this.workspaceId(context, projectId);
     const rows = await this.db.agentDefinition.findMany({
-      where: { projectId, agentType, deletedAt: null },
+      where: { projectId, workspaceId, agentType, deletedAt: null },
       include: { versions: { orderBy: { version: "desc" }, take: 1 } },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
@@ -117,16 +116,17 @@ export class AgentConfigService implements AgentHostContext {
     agentType: string,
     request: SaveAgentDefinitionRequest,
   ): Promise<AgentDefinitionDto> {
-    await this.projects.find(context, projectId);
+    const workspaceId = await this.workspaceId(context, projectId);
     const content = this.validated(CONTENT[request.kind], request.content, request.kind);
     const existing = await this.db.agentDefinition.count({
-      where: { projectId, agentType, kind: request.kind, deletedAt: null },
+      where: { projectId, workspaceId, agentType, kind: request.kind, deletedAt: null },
     });
     if (existing >= MAX_DEFINITIONS)
       throw new ConflictError(`A project can have at most ${MAX_DEFINITIONS} of these.`);
     const row = await this.db.agentDefinition.create({
       data: {
         projectId,
+        workspaceId,
         agentType,
         kind: request.kind,
         enabled: request.enabled,
@@ -209,6 +209,15 @@ export class AgentConfigService implements AgentHostContext {
     );
     if (!found) throw new NotFoundError("Definition not found.");
     return found;
+  }
+
+  private async workspaceId(context: RequestContext, projectId: string): Promise<string> {
+    const project = await this.projects.find(context, projectId);
+    const workspace = context.workspaceId
+      ? project.workspaces.find((item) => item.id === context.workspaceId)
+      : project.workspace;
+    if (!workspace) throw new NotFoundError("Project workspace not found.");
+    return workspace.id;
   }
 
   private validated(

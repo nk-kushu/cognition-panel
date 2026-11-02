@@ -7,6 +7,7 @@ export class HttpAgentSettingsApi implements AgentSettingsApi {
     private readonly base: string,
     private readonly projectId: string,
     private readonly agentId: string,
+    private readonly workspaceId?: string,
   ) {}
 
   private async request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
@@ -14,10 +15,12 @@ export class HttpAgentSettingsApi implements AgentSettingsApi {
       `${this.base}/projects/${encodeURIComponent(this.projectId)}${path}`,
       {
         method,
+        headers: {
+          ...(this.workspaceId ? { "X-Workspace-Id": this.workspaceId } : {}),
+          ...(method === "GET" ? {} : { "Content-Type": "application/json" }),
+        },
         // The server requires JSON on every state-changing request, even an empty one.
-        ...(method === "GET"
-          ? {}
-          : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) }),
+        ...(method === "GET" ? {} : { body: JSON.stringify(body ?? {}) }),
       },
     );
     if (!response.ok) {

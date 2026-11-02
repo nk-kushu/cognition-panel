@@ -28,7 +28,7 @@ const value = {
 };
 
 function fixture(events: unknown) {
-  const findFirst = vi.fn().mockResolvedValue({ events });
+  const findFirst = vi.fn().mockResolvedValue({ events, workspaceId: "workspace-one" });
   const db = { chatTurn: { findFirst } } as unknown as PrismaClient;
   return { findFirst, threads: new ChatThreads(db, {} as ProjectService, {} as Logger) };
 }
@@ -41,11 +41,12 @@ describe("coding result evidence", () => {
     ]);
     expect(await threads.codingResult(context, "project", "run")).toEqual({
       result,
+      workspaceId: "workspace-one",
       artifacts: { "artifact:artifact-one": ref },
     });
     expect(findFirst).toHaveBeenCalledWith({
       where: { id: "run", thread: { actorId: "alice", projectId: "project" } },
-      select: { events: true },
+      select: { events: true, workspaceId: true },
     });
   });
 

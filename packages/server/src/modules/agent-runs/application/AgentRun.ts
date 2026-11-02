@@ -26,6 +26,7 @@ export class AgentRun {
     readonly projectId: string,
     readonly agentName: string,
     readonly debug: boolean,
+    readonly workspaceId?: string,
   ) {
     this.log.push({ seq: 0, event: { type: "status", status: "starting" } });
   }

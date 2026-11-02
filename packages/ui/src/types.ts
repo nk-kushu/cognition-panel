@@ -14,6 +14,7 @@ export type RouterMode = "memory" | "browser" | "hash";
 
 export type AgentConfigurationProps = Readonly<{
   agentName: string;
+  workspaceId?: string;
   projectId: string;
   /** Same-origin API prefix, for agents that keep project data on the server. */
   apiBaseUrl: string;

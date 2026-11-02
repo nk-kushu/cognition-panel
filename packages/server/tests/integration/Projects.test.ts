@@ -26,6 +26,19 @@ beforeEach(async () => {
       "utf8",
     ),
   );
+  for (const migration of [
+    "20261028160000_chat_threads",
+    "20261101120000_agent_config",
+    "20261101150000_multiple_workspaces",
+  ]) {
+    await migrator.add(
+      migration,
+      await readFile(
+        new URL(`../../prisma/migrations/${migration}/migration.sql`, import.meta.url),
+        "utf8",
+      ),
+    );
+  }
   await migrator.deploy(temporary.url);
   database = new PrismaDatabase(
     { url: temporary.url, maxConnections: 2, connectionTimeoutMs: 1000 },
@@ -60,9 +73,11 @@ describe("project persistence", () => {
     });
     expect(await workspaces.findForProject(project.id, "other-actor")).toBeNull();
     expect(await projects.find("other-actor", project.id)).toBeNull();
-    await expect(
-      database.client.workspace.create({ data: { projectId: project.id, path: "second" } }),
-    ).rejects.toMatchObject({ code: "P2002" });
+    const second = await projects.addWorkspace("local-operator", project.id, "second");
+    expect(second?.workspaces).toHaveLength(2);
+    expect(second?.workspaces.map((workspace) => workspace.path)).toEqual(
+      expect.arrayContaining(["checkout", "second"]),
+    );
     const [schemas] = await database.client.$queryRaw<
       { project: string | null; workspace: string | null }[]
     >`SELECT to_regclass('kushex."Project"')::text AS project, to_regclass('kushex."Workspace"')::text AS workspace`;

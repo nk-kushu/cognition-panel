@@ -77,10 +77,10 @@ export class ChatThreads {
     await this.saves.get(runId);
     const turn = await this.db.chatTurn.findFirst({
       where: { id: runId, thread: { actorId: context.actor.id, projectId } },
-      select: { events: true },
+      select: { events: true, workspaceId: true },
     });
     if (!turn) throw new NotFoundError("Chat run not found.");
-    return this.codingEvidence.read(turn.events);
+    return { ...this.codingEvidence.read(turn.events), workspaceId: turn.workspaceId };
   }
 
   async delete(context: RequestContext, projectId: string, id?: string) {
@@ -106,6 +106,7 @@ export class ChatThreads {
           id: run.id,
           threadId,
           agentName: run.agentName,
+          workspaceId: run.workspaceId ?? null,
           message: request.message,
           files: [...request.files],
           debug: run.debug,

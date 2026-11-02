@@ -5,9 +5,8 @@ Status: **implemented** (phase 2 of the [implementation plan](03-implementation-
 ## Ownership
 
 A Project is durable app data: ID, local actor, name, description, creation time. Its
-Workspace is a separate persisted pointer to an existing checkout. A unique
-`Workspace.projectId` enforces one workspace per project; removing that constraint
-later can support worktrees or multiple repositories. Branch and revision are
+Workspaces are separate persisted pointers to existing checkouts. Each project can
+have multiple workspaces, including different repositories or worktrees. Branch and revision are
 nullable placeholders; this phase reads no Git metadata.
 
 Deleting or moving a checkout leaves the Project intact. Filesystem requests then
@@ -65,9 +64,21 @@ Routes below are on the backend; the frontend proxy adds `/api`.
 | `GET /locations?offset=0` | Immediate subdirectories of every root, root-prefixed, `{ entries, nextOffset }` |
 | `POST /projects` | `{ name, path, description? }` → `201 ProjectDto` |
 | `GET /projects?offset=0` | `{ entries: ProjectDto[], nextOffset }`, 100 projects per page |
-| `GET /projects/:id` | Selected project metadata, including workspace |
+| `GET /projects/:id` | Selected project metadata, including `workspaces` and the initial `workspace` for older hosts |
+| `POST /projects/:id/workspaces` | `{ path }` → `201 ProjectDto`, validates and attaches another checkout |
 | `GET /projects/:id/tree?path=&offset=0` | One directory's `{ entries, nextOffset }` |
 | `GET /projects/:id/file?path=src/index.ts` | `{ path, size, kind: "text", content }` or `{ path, size, kind: "binary" }` |
+
+Workspace-aware requests carry `X-Workspace-Id`. The server checks that the workspace
+belongs to the authorized project; unknown or foreign workspace IDs return 404.
+Older hosts that omit the header use the oldest workspace. The top bar lets users
+add and switch workspaces; switching clears open files and workspace query caches.
+Agent settings use the database key `(projectId, workspaceId, agentType)`, and skills
+and guards have the same scope. Memory remains shared across the project. Runs pin
+their workspace for later resumes and coding publication.
+
+The `20261101150000_multiple_workspaces` migration preserves existing settings and
+definitions in their original workspace. Deploy it before running the updated server.
 
 Project creation validates the checkout before an atomic nested Prisma create.
 Project and Workspace rows are committed together in the `kushex` schema. The

@@ -20,7 +20,11 @@ export class WorkspaceService {
     context: RequestContext,
     projectId: string,
   ): Promise<{ workspace: Workspace; scope: WorkspaceScope }> {
-    const workspace = await this.repository.findForProject(projectId, context.actor.id);
+    const workspace = await this.repository.findForProject(
+      projectId,
+      context.actor.id,
+      context.workspaceId,
+    );
     if (!workspace) throw new NotFoundError("Project workspace not found.");
     return {
       workspace,

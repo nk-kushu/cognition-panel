@@ -10,7 +10,9 @@ export type ProjectDto = Readonly<{
   name: string;
   description: string | null;
   createdAt: string;
+  /** Initial workspace, retained for older hosts. Use workspaces for selection. */
   workspace: WorkspaceDto;
+  workspaces: readonly WorkspaceDto[];
 }>;
 export type CreateProjectRequest = Readonly<{ name: string; path: string; description?: string }>;
 export type Page<T> = Readonly<{ entries: readonly T[]; nextOffset: number | null }>;

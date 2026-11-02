@@ -4,7 +4,14 @@ import type { Workspace } from "../domain/Workspace.js";
 
 export class PrismaWorkspaceRepository implements WorkspaceRepository {
   constructor(private readonly client: PrismaClient) {}
-  findForProject(projectId: string, actorId: string): Promise<Workspace | null> {
-    return this.client.workspace.findFirst({ where: { projectId, project: { actorId } } });
+  findForProject(
+    projectId: string,
+    actorId: string,
+    workspaceId?: string,
+  ): Promise<Workspace | null> {
+    return this.client.workspace.findFirst({
+      where: { projectId, ...(workspaceId ? { id: workspaceId } : {}), project: { actorId } },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
   }
 }

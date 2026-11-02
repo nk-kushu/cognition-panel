@@ -109,6 +109,7 @@ export type AgentSettingsPanelProps = Readonly<{
   config: AgentSettingsConfiguration &
     Readonly<{
       projectId: string;
+      workspaceId?: string;
       apiBaseUrl: string;
       disabled?: boolean;
     }>;

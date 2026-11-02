@@ -33,3 +33,25 @@ it("surfaces server errors to plugin callers", async () => {
     "Save an OpenRouter API key first.",
   );
 });
+
+it("invokes native-style browser fetch with its global receiver for status and catalog requests", async () => {
+  const http = vi.fn(function (this: unknown, input: RequestInfo | URL) {
+    if (this !== globalThis) throw new TypeError("Illegal invocation");
+    return Promise.resolve(
+      Response.json(
+        String(input).endsWith("/models")
+          ? [{ id: "vendor/code", name: "Code model", contextTokens: 32000 }]
+          : { configured: true, updatedAt: null },
+      ),
+    );
+  });
+  vi.stubGlobal("fetch", http);
+  try {
+    const api = new OpenRouterApi("/api");
+    await expect(api.status()).resolves.toEqual({ configured: true, updatedAt: null });
+    await expect(api.models("code")).resolves.toHaveLength(1);
+    expect(http).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

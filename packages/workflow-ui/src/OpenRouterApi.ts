@@ -14,7 +14,8 @@ export type OpenRouterStatus = Readonly<{
 export class OpenRouterApi {
   constructor(
     private readonly apiBaseUrl = "/api",
-    private readonly http: typeof fetch = fetch,
+    // Native browser fetch must be invoked on the global object, not this API instance.
+    private readonly http: typeof fetch = (...args) => globalThis.fetch(...args),
   ) {}
 
   status(signal?: AbortSignal): Promise<OpenRouterStatus> {

@@ -66,7 +66,9 @@ beforeEach(async () => {
   migrator = await PrismaMigrator.create();
   for (const migration of [
     "20261023000000_projects_and_workspaces",
+    "20261028160000_chat_threads",
     "20261101120000_agent_config",
+    "20261101150000_multiple_workspaces",
   ]) {
     await migrator.add(
       migration,
@@ -123,6 +125,67 @@ describe("project workspace skills in PostgreSQL", () => {
     });
     expect(versions.map((row) => row.id)).toEqual([created.versionId, updated.versionId]);
     expect(versions[0]?.content).toEqual(skill.content);
+  });
+
+  it("keeps settings revisions and definitions independent for two workspaces of one project", async () => {
+    const projects = new PrismaProjectRepository(database.client);
+    const project = await projects.create(operator.actor.id, {
+      name: "Multiple",
+      path: "root/first",
+    });
+    const updated = await projects.addWorkspace(operator.actor.id, project.id, "root/second");
+    expect(updated?.workspaces).toHaveLength(2);
+    const second = updated!.workspaces.find((workspace) => workspace.id !== project.workspace.id)!;
+    const firstContext = { ...operator, workspaceId: project.workspace.id };
+    const secondContext = { ...operator, workspaceId: second.id };
+    const service = configuration();
+    const defaults = JSON.parse(
+      await readFile(
+        new URL("../../../../plugins/coding/ui/settings.json", import.meta.url),
+        "utf8",
+      ),
+    ).defaults;
+    const first = await service.saveSettings(firstContext, project.id, "coding", defaults, 0);
+    const other = await service.saveSettings(
+      secondContext,
+      project.id,
+      "coding",
+      { ...defaults, limits: { ...defaults.limits, clarifications: 1 } },
+      0,
+    );
+    expect(first.revision).toBe(1);
+    expect(other.revision).toBe(1);
+    expect(
+      (await service.load(secondContext, project.id, "coding", undefined)).settings,
+    ).toMatchObject({ limits: { clarifications: 1 } });
+    await service.saveSettings(firstContext, project.id, "coding", defaults, 1);
+    expect((await service.settings(secondContext, project.id, "coding")).revision).toBe(1);
+    const definition = await service.createDefinition(firstContext, project.id, "coding", skill);
+    expect(await service.definitions(secondContext, project.id, "coding")).toEqual([]);
+    await expect(
+      service.deleteDefinition(secondContext, project.id, "coding", definition.id),
+    ).rejects.toThrow(NotFoundError);
+    const wrongProject = await projects.create(operator.actor.id, {
+      name: "Wrong",
+      path: "root/wrong",
+    });
+    await expect(
+      service.settings(
+        { ...operator, workspaceId: wrongProject.workspace.id },
+        project.id,
+        "coding",
+      ),
+    ).rejects.toThrow(NotFoundError);
+    await expect(
+      database.client.agentProjectSettings.create({
+        data: {
+          projectId: project.id,
+          workspaceId: wrongProject.workspace.id,
+          agentType: "coding",
+          settings: {},
+        },
+      }),
+    ).rejects.toMatchObject({ code: "P2003" });
   });
 
   it("isolates projects, workspaces, plugin agent types and actors for reads and writes", async () => {

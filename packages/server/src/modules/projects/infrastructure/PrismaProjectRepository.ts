@@ -8,7 +8,7 @@ export class PrismaProjectRepository implements ProjectRepository {
   async find(actorId: string, id: string): Promise<ProjectDto | null> {
     const row = await this.client.project.findFirst({
       where: { id, actorId },
-      include: { workspace: true },
+      include: { workspaces: true },
     });
     return row ? this.toDto(row) : null;
   }
@@ -19,16 +19,16 @@ export class PrismaProjectRepository implements ProjectRepository {
         actorId,
         name: input.name,
         description: input.description ?? null,
-        workspace: { create: { path: input.path } },
+        workspaces: { create: { path: input.path } },
       },
-      include: { workspace: true },
+      include: { workspaces: true },
     });
     return this.toDto(project);
   }
   async list(actorId: string, offset: number): Promise<Page<ProjectDto>> {
     const rows = await this.client.project.findMany({
       where: { actorId },
-      include: { workspace: true },
+      include: { workspaces: true },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: offset,
       take: this.pageSize + 1,
@@ -38,20 +38,24 @@ export class PrismaProjectRepository implements ProjectRepository {
       nextOffset: rows.length > this.pageSize ? offset + this.pageSize : null,
     };
   }
-  private toDto(project: Prisma.ProjectGetPayload<{ include: { workspace: true } }>): ProjectDto {
-    if (!project.workspace) throw new Error("Project is missing its workspace.");
-    const { id, name, description, createdAt, workspace } = project;
+  async addWorkspace(actorId: string, projectId: string, path: string): Promise<ProjectDto | null> {
+    if (!(await this.find(actorId, projectId))) return null;
+    await this.client.workspace.create({ data: { projectId, path } });
+    return this.find(actorId, projectId);
+  }
+  private toDto(project: Prisma.ProjectGetPayload<{ include: { workspaces: true } }>): ProjectDto {
+    if (!project.workspaces[0]) throw new Error("Project is missing its workspace.");
+    const { id, name, description, createdAt } = project;
+    const workspaces = [...project.workspaces]
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
+      .map(({ id, path, branch, revision }) => ({ id, path, branch, revision }));
     return {
       id,
       name,
       description,
       createdAt: createdAt.toISOString(),
-      workspace: {
-        id: workspace.id,
-        path: workspace.path,
-        branch: workspace.branch,
-        revision: workspace.revision,
-      },
+      workspace: workspaces[0]!,
+      workspaces,
     };
   }
 }

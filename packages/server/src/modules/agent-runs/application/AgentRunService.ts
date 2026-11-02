@@ -70,6 +70,7 @@ export class AgentRunService implements ManagedResource {
     resume?: unknown,
   ): Promise<AgentRunDto> {
     const { workspace } = await this.workspaces.forProject(context, projectId);
+    context = { ...context, workspaceId: workspace.id };
     const checkout = await this.paths.resolve(workspace.path);
     const entry = await this.agents.entry(request.agentName);
     const active = [...this.runs.values()].filter((run) => !run.finished);
@@ -85,7 +86,13 @@ export class AgentRunService implements ManagedResource {
     );
     const credentials =
       request.agentName === "coding" ? await this.credentials?.credentials(context) : undefined;
-    const run = new AgentRun(context.actor.id, projectId, request.agentName, request.debug);
+    const run = new AgentRun(
+      context.actor.id,
+      projectId,
+      request.agentName,
+      request.debug,
+      workspace.id,
+    );
     this.waits?.capture(run, request.threadId);
     if (request.threadId) {
       if (!this.threads) throw new ConflictError("Chat thread storage is unavailable.");

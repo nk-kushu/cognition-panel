@@ -107,11 +107,10 @@ Open **Configure** in the chat for the rest. All of it is saved per project and 
 
 - **Workflow**: the state machine as a graph. Select a step or a coloured return path to edit
   only what controls it: its limits, models, skills and guards. Limits and models wait for
-  _Save_; a skill or guard change saves a new version straight away.
-- **Limits**: returns by category, total returns, answer rounds, working time, model calls
-  and tokens. Validated in the backend as well as the UI.
-- **Models**: a default plus overrides for investigation, implementation, guard review, the
-  skill scheduler and answers. A skill or guard can name its own model.
+  _Save_; a skill or guard change saves a new version straight away. Model fields offer a
+  searchable OpenRouter catalog, matched by provider/model ID or display name. Roles are
+  shared between steps, and blank roles inherit the default. A skill or guard can select
+  its own model. Limit values are validated in the backend as well as the UI.
 - **Tests**: the test-writing prompt, test types, and the suites that run them. With no type
   selected, tests are written but not run, and the result says so. A selected type with no
   enabled suite stops a code change as blocked verification before tests are written.
@@ -151,6 +150,7 @@ no paid calls occur; the commands are real.
 ### OpenRouter models
 
 Save an encrypted OpenRouter API key in **Cognition Panel Settings → OpenRouter**, then use
-the coding agent’s **Configure → Models** tab to select live catalog models per role. Blank roles inherit the default;
-Codex CLI model names continue to work. See [OpenRouter setup](../../docs/openrouter.md)
+**Configure → Workflow**, select a model-using step, and search its **Models** dropdowns.
+Select a catalog entry and press **Save**. Blank roles inherit the default; existing
+Codex model selections are preserved. See [OpenRouter setup](../../docs/openrouter.md)
 for the server encryption key, database migration, and credential lifecycle.

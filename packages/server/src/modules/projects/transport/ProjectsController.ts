@@ -19,6 +19,23 @@ export class ProjectsController implements HttpController {
         return this.projects.find(this.contexts.create(request), request.params.id);
       },
     );
+    routes.post<{ Params: { id: string }; Body: { path: string } }>(
+      "/projects/:id/workspaces",
+      {
+        schema: {
+          params: z.object({ id: z.uuid() }),
+          body: z.object({ path: z.string().min(1).max(4096) }).strict(),
+        },
+      },
+      async (request, reply) => {
+        const project = await this.projects.addWorkspace(
+          this.contexts.create(request),
+          request.params.id,
+          request.body.path,
+        );
+        return reply.code(201).header("Cache-Control", "no-store").send(project);
+      },
+    );
     routes.post<{ Body: CreateProjectRequest }>(
       "/projects",
       {

@@ -14,13 +14,13 @@ datasource db {
 }
 
 model Project {
-  id          String     @id @default(uuid()) @db.Uuid
-  actorId     String
-  name        String     @db.VarChar(200)
-  description String?    @db.VarChar(2000)
-  createdAt   DateTime   @default(now())
-  workspace   Workspace?
-  chatThreads ChatThread[]
+  id               String                 @id @default(uuid()) @db.Uuid
+  actorId          String
+  name             String                 @db.VarChar(200)
+  description      String?                @db.VarChar(2000)
+  createdAt        DateTime               @default(now())
+  workspaces       Workspace[]
+  chatThreads      ChatThread[]
   agentSettings    AgentProjectSettings[]
   agentDefinitions AgentDefinition[]
   agentRunWaits    AgentRunWait[]
@@ -44,28 +44,35 @@ model ChatThread {
 }
 
 model ChatTurn {
-  id        String     @id @db.Uuid
-  threadId  String     @db.Uuid
-  agentName String     @db.VarChar(63)
-  message   String
-  files     Json
-  debug     Boolean
-  events    Json
-  createdAt DateTime   @default(now())
-  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  workspaceId String?    @db.Uuid
+  id          String     @id @db.Uuid
+  threadId    String     @db.Uuid
+  agentName   String     @db.VarChar(63)
+  message     String
+  files       Json
+  debug       Boolean
+  events      Json
+  createdAt   DateTime   @default(now())
+  thread      ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@index([threadId, createdAt, id])
   @@schema("kushex")
 }
 
 model Workspace {
-  id        String  @id @default(uuid()) @db.Uuid
-  projectId String  @unique @db.Uuid
-  path      String  @db.VarChar(4096)
+  createdAt DateTime @default(now())
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  path      String   @db.VarChar(4096)
   branch    String?
   revision  String?
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  settings    AgentProjectSettings[]
+  definitions AgentDefinition[]
+
+  @@unique([projectId, id])
+  @@index([projectId])
   @@schema("kushex")
 }
 
@@ -86,16 +93,16 @@ enum Density {
 }
 
 model UserSettings {
-  actorId   String    @id
-  colorMode ColorMode @default(system)
-  density   Density   @default(comfortable)
+  actorId        String    @id
+  colorMode      ColorMode @default(system)
+  density        Density   @default(comfortable)
   /// Pixels, for every Monaco editor in the panel.
-  editorFontSize Int  @default(13)
+  editorFontSize Int       @default(13)
   /// Pixels, for the code notes of the agent editor.
-  noteFontSize Int    @default(13)
+  noteFontSize   Int       @default(13)
   /// Splitter id → panel fractions; PATCH merges by id.
-  splitterSizes Json  @default("{}")
-  updatedAt DateTime  @updatedAt
+  splitterSizes  Json      @default("{}")
+  updatedAt      DateTime  @updatedAt
 
   @@schema("kushex")
 }
@@ -147,17 +154,19 @@ model Note {
   @@schema("kushex")
 }
 
-// An agent's settings for one project, for example the coding agent's limits and models.
+// An agent's settings for one project workspace, for example the coding agent's limits and models.
 model AgentProjectSettings {
-  projectId String   @db.Uuid
-  agentType String   @db.VarChar(63)
-  settings  Json
+  workspaceId String    @db.Uuid
+  workspace   Workspace @relation(fields: [projectId, workspaceId], references: [projectId, id], onDelete: Cascade)
+  projectId   String    @db.Uuid
+  agentType   String    @db.VarChar(63)
+  settings    Json
   /// Bumped on every save; a save must name the revision it was based on.
-  revision  Int      @default(1)
-  updatedAt DateTime @updatedAt
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revision    Int       @default(1)
+  updatedAt   DateTime  @updatedAt
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  @@id([projectId, agentType])
+  @@id([projectId, workspaceId, agentType])
   @@schema("kushex")
 }
 
@@ -171,17 +180,19 @@ enum AgentDefinitionKind {
 // A skill or guard managed in the UI. Each save adds a version, so a run pins exactly what it
 // used and deleting keeps the versions that past runs refer to.
 model AgentDefinition {
-  id        String              @id @default(uuid()) @db.Uuid
-  projectId String              @db.Uuid
-  agentType String              @db.VarChar(63)
-  kind      AgentDefinitionKind
-  enabled   Boolean             @default(true)
-  deletedAt DateTime?
-  createdAt DateTime            @default(now())
-  project   Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  versions  AgentDefinitionVersion[]
+  workspaceId String                   @db.Uuid
+  workspace   Workspace                @relation(fields: [projectId, workspaceId], references: [projectId, id], onDelete: Cascade)
+  id          String                   @id @default(uuid()) @db.Uuid
+  projectId   String                   @db.Uuid
+  agentType   String                   @db.VarChar(63)
+  kind        AgentDefinitionKind
+  enabled     Boolean                  @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime                 @default(now())
+  project     Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions    AgentDefinitionVersion[]
 
-  @@index([projectId, agentType, kind])
+  @@index([projectId, workspaceId, agentType, kind])
   @@schema("kushex")
 }
 
@@ -208,21 +219,22 @@ enum AgentWaitStatus {
 // A run suspended on a human. Its id is the chat run that asked; the agent process has ended,
 // so this row and the run's files are what survive a reload or a server restart.
 model AgentRunWait {
-  id           String          @id @db.Uuid
-  projectId    String          @db.Uuid
-  actorId      String
-  agentName    String          @db.VarChar(63)
-  threadId     String?         @db.Uuid
+  workspaceId String?         @db.Uuid
+  id          String          @id @db.Uuid
+  projectId   String          @db.Uuid
+  actorId     String
+  agentName   String          @db.VarChar(63)
+  threadId    String?         @db.Uuid
   /// The agent's own run, which `resume` reopens.
-  agentRunRef  String          @db.VarChar(120)
-  waitRef      String          @db.VarChar(120)
-  kind         String          @db.VarChar(32)
-  payload      Json
-  status       AgentWaitStatus @default(pending)
-  response     Json?
-  createdAt    DateTime        @default(now())
-  answeredAt   DateTime?
-  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  agentRunRef String          @db.VarChar(120)
+  waitRef     String          @db.VarChar(120)
+  kind        String          @db.VarChar(32)
+  payload     Json
+  status      AgentWaitStatus @default(pending)
+  response    Json?
+  createdAt   DateTime        @default(now())
+  answeredAt  DateTime?
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, status])
   @@schema("kushex")

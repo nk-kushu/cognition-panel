@@ -18,6 +18,17 @@ export class ProjectService {
     await this.workspaces.validateLocation(context, input.path);
     return this.repository.create(context.actor.id, input);
   }
+  async addWorkspace(
+    context: RequestContext,
+    projectId: string,
+    path: string,
+  ): Promise<ProjectDto> {
+    await this.find(context, projectId);
+    await this.workspaces.validateLocation(context, path);
+    const project = await this.repository.addWorkspace(context.actor.id, projectId, path);
+    if (!project) throw new NotFoundError("Project not found.");
+    return project;
+  }
   list(context: RequestContext, offset: number): Promise<Page<ProjectDto>> {
     return this.repository.list(context.actor.id, offset);
   }

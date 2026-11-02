@@ -1,3 +1,5 @@
+import { useAppSelector } from "../../app/hooks";
+import { selectWorkspaceId } from "../workbench/workbenchSlice";
 import { Alert, Button, Modal } from "antd";
 import { IconSettings } from "@tabler/icons-react";
 import { Component, createContext, useContext, useState, type ReactNode } from "react";
@@ -12,6 +14,7 @@ export function AgentConfigurationPanel({
   agent,
   ...props
 }: Omit<AgentConfigurationProps, "agentName" | "apiBaseUrl"> & { agent: AgentSummaryDto }) {
+  const workspaceId = useAppSelector(selectWorkspaceId);
   const [open, setOpen] = useState(false);
   const plugins = useContext(AgentUiPluginsContext);
   const { apiBaseUrl } = useContext(AgentApiContext);
@@ -49,7 +52,13 @@ export function AgentConfigurationPanel({
         }}
       >
         <ConfigurationBoundary>
-          <Configuration {...props} agentName={agent.name} apiBaseUrl={apiBaseUrl} />
+          <Configuration
+            key={workspaceId ?? "default"}
+            {...props}
+            workspaceId={workspaceId ?? undefined}
+            agentName={agent.name}
+            apiBaseUrl={apiBaseUrl}
+          />
         </ConfigurationBoundary>
       </Modal>
     </>

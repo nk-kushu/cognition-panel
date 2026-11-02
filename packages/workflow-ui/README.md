@@ -97,9 +97,15 @@ and `tests`. `SettingsWorkflowGraph` resolves model choices, enabled suites,
 skill/guard attachments, return limits, and counts from the current draft.
 
 The panel owns HTTP persistence, loading, drafts, revisions, definitions, memory,
-and OpenRouter integration. Its only prop is `config`; no clients, stores, hooks,
+and OpenRouter integration. Model fields in step inspectors, skills, and guards use
+searchable dropdowns matching provider/model IDs and display names. Search text stays
+separate from the selected model; clearing a selection restores inheritance. Catalog
+loading, missing-key guidance, and retriable errors are shared across the panel.
+Its only prop is `config`; no clients, stores, hooks,
 React nodes, or callbacks are passed to it. API requests use
 `/projects/:projectId/agents/:agentId/{settings,definitions}` and project `/memory`.
+Pass `workspaceId` to the panel or host to send `X-Workspace-Id` with requests. Settings,
+skills and guards are isolated by project, workspace and agent type; memory is project-wide.
 `apiBaseUrl` supplies the prefix. `AgentSettingsHost` bridges the surrounding app's
 controlled request-mode events through context while keeping the panel input JSON.
 

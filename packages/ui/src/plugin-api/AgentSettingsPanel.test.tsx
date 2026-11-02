@@ -195,7 +195,7 @@ it.each(["skill", "guard"] as const)(
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
     await user.click(remove);
-    await user.click(screen.getByRole("button", { name: "Delete", exact: true }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() =>
       expect(
         screen.queryByRole("button", { name: `Delete ${kind}: Project convention` }),

@@ -1,5 +1,9 @@
-import { useProjectQuery, useProjectsQuery } from "../../shared/api/kushexApi";
-import { Avatar, Button, Input, Select, Tooltip, Typography } from "antd";
+import {
+  useProjectQuery,
+  useProjectsQuery,
+  useAddWorkspaceMutation,
+} from "../../shared/api/kushexApi";
+import { Alert, Avatar, Button, Input, Modal, Select, Tooltip, Typography } from "antd";
 import { IconMoon, IconSun, IconSunMoon } from "@tabler/icons-react";
 import { useNavigate } from "react-router";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
@@ -8,7 +12,9 @@ import { SearchIcon, SettingsIcon, UserIcon } from "../../shared/lib/icons";
 import { borderB } from "../../shared/lib/styles";
 import { colorModeChanged, selectColorMode, type ColorMode } from "../settings/settingsSlice";
 import { paths, useOpenProject } from "./navigation";
-import { selectProjectId } from "./workbenchSlice";
+import { useState } from "react";
+import { errorMessage } from "../../shared/api/errorMessage";
+import { selectProjectId, selectWorkspaceId, workspaceSelected } from "./workbenchSlice";
 
 const nextColorMode: Readonly<Record<ColorMode, ColorMode>> = {
   light: "dark",
@@ -22,10 +28,15 @@ export function TopBar({ compact }: Readonly<{ compact?: boolean }>) {
   const navigate = useNavigate();
   const openProject = useOpenProject();
   const project = useAppSelector(selectProjectId);
+  const workspaceId = useAppSelector(selectWorkspaceId);
+  const [addingWorkspace, setAddingWorkspace] = useState(false);
+  const [workspacePath, setWorkspacePath] = useState("");
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [addWorkspace, savingWorkspace] = useAddWorkspaceMutation();
   const projects = useProjectsQuery(0);
   const selected = useProjectQuery(project ?? "", { skip: !project });
   const choices = [...(projects.data?.entries ?? [])];
-  const selectedProject = selected.data;
+  const selectedProject = selected.currentData;
   if (selectedProject && !choices.some((entry) => entry.id === selectedProject.id))
     choices.push(selectedProject);
   const colorMode = useAppSelector(selectColorMode);
@@ -46,6 +57,55 @@ export function TopBar({ compact }: Readonly<{ compact?: boolean }>) {
         options={choices.map((project) => ({ value: project.id, label: project.name }))}
         className="kx:w-44"
       />
+      {selectedProject && (
+        <>
+          <Select
+            aria-label="Workspace"
+            size="small"
+            value={workspaceId ?? selectedProject.workspace.id}
+            options={selectedProject.workspaces.map((workspace) => ({
+              value: workspace.id,
+              label: workspace.path,
+            }))}
+            onChange={(id: string) => dispatch(workspaceSelected(id))}
+            className="kx:w-52"
+          />
+          <Button size="small" onClick={() => setAddingWorkspace(true)}>
+            Add workspace
+          </Button>
+          <Modal
+            title="Add workspace"
+            open={addingWorkspace}
+            confirmLoading={savingWorkspace.isLoading}
+            onCancel={() => setAddingWorkspace(false)}
+            onOk={async () => {
+              try {
+                const updated = await addWorkspace({
+                  projectId: selectedProject.id,
+                  path: workspacePath,
+                }).unwrap();
+                const added = updated.workspaces.find(
+                  (workspace) => !selectedProject.workspaces.some((old) => old.id === workspace.id),
+                );
+                if (added) dispatch(workspaceSelected(added.id));
+                setAddingWorkspace(false);
+                setWorkspacePath("");
+                setWorkspaceError(null);
+              } catch (error) {
+                setWorkspaceError(errorMessage(error));
+              }
+            }}
+          >
+            <Input
+              aria-label="Workspace path"
+              placeholder="Root-relative directory path"
+              value={workspacePath}
+              onChange={(event) => setWorkspacePath(event.target.value)}
+            />
+            {workspaceError && <Alert type="error" title={workspaceError} />}
+          </Modal>
+        </>
+      )}
       {!compact && (
         <Input
           aria-label="Search"

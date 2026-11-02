@@ -40,16 +40,17 @@ for the existing local deployment and its Host/Origin protections.
 1. Open Cognition Panel **Settings → OpenRouter**.
 2. Enter your OpenRouter API key and click **Save API key**, then **Test connection**.
    The key is shared across projects and the input clears after saving.
-3. Open the coding agent’s **Configure → Models** tab. Search a model field and select
-   an OpenRouter model. Choose a default model or
-   override individual roles. Blank role fields inherit the default. Existing Codex
+3. Open the coding agent’s **Configure → Workflow** tab and select a model-using step.
+   Search its **Models** fields by provider/model ID or display name and select an
+   OpenRouter model. Choose a default model or override individual roles. Blank role fields inherit the default. Existing Codex
    model names still use Codex CLI.
 4. Click **Save** to persist the project's model choices. New runs pin those choices;
    resumed runs retain their original model IDs and use the currently saved key.
 
 Model IDs are saved as `openrouter:<provider>/<model>`, for example
-`openrouter:anthropic/claude-sonnet-4`. You can also enter an ID manually. The catalog
-is refreshed when opening the Models tab, or with **Refresh models**.
+`openrouter:anthropic/claude-sonnet-4`. Searching does not change the selected model.
+The catalog loads when opening the configuration panel. A failed load offers
+**Retry models**; a missing key directs you to **Settings → OpenRouter**.
 Only text-output models with IDs accepted by Kushibot's gateway are offered.
 
 The runner fetches current context/output limits, then calls OpenRouter's stateless

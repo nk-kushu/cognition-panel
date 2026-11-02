@@ -61,6 +61,7 @@ export class AgentWaits implements AgentWaitRecorder {
             data: {
               id: run.id,
               projectId: run.projectId,
+              workspaceId: run.workspaceId ?? null,
               actorId: run.actorId,
               agentName: run.agentName,
               threadId: threadId ?? null,
@@ -113,7 +114,7 @@ export class AgentWaits implements AgentWaitRecorder {
     if (request.remember) await this.memory.add(context, projectId, request.remember);
     if (!this.runs) throw new Error("Agent runs are unavailable.");
     return this.runs.launch(
-      context,
+      { ...context, ...(wait.workspaceId ? { workspaceId: wait.workspaceId } : {}) },
       projectId,
       {
         agentName: wait.agentName,

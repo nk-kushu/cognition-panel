@@ -30,7 +30,11 @@ const jsonHeaders = { "content-type": "application/json", origin };
 beforeEach(async () => {
   fixture = await WorkspaceFixture.create();
   repository = new InMemoryProjectRepository();
-  const filesystem = new LocalWorkspaceFileSystem(new WorkspacePathResolver(fixture.roots), 64, 500);
+  const filesystem = new LocalWorkspaceFileSystem(
+    new WorkspacePathResolver(fixture.roots),
+    64,
+    500,
+  );
   const workspaces = new WorkspaceService(repository, filesystem);
   const contexts = new RequestContextFactory(new LocalOperatorActorResolver());
   const logger = pino({ level: "silent" });
@@ -88,6 +92,39 @@ describe("projects and files over HTTP", () => {
     expect(
       await (await fetch(`${base}/projects/${project.id}/file?path=src%2Findex.ts`)).json(),
     ).toMatchObject({ kind: "text", content: "export const answer = 42;\n" });
+  });
+  it("adds workspaces and reads only the selected workspace within the authorized project", async () => {
+    const project = await create();
+    const response = await fetch(`${base}/projects/${project.id}/workspaces`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ path: "other/gamma" }),
+    });
+    expect(response.status).toBe(201);
+    const updated = (await response.json()) as ProjectDto;
+    expect(updated.workspaces).toHaveLength(2);
+    const added = updated.workspaces.find((workspace) => workspace.path === "other/gamma")!;
+    const selected = await fetch(`${base}/projects/${project.id}/tree`, {
+      headers: { "X-Workspace-Id": added.id },
+    });
+    expect(selected.status).toBe(200);
+    expect(await selected.json()).not.toMatchObject({
+      entries: expect.arrayContaining([{ name: "src", path: "src", kind: "directory" }]),
+    });
+    const another = await create();
+    expect(
+      (
+        await fetch(`${base}/projects/${project.id}/tree`, {
+          headers: { "X-Workspace-Id": another.workspace.id },
+        })
+      ).status,
+    ).toBe(404);
+    const denied = await fetch(`${base}/projects/${randomUUID()}/workspaces`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ path: "other/gamma" }),
+    });
+    expect(denied.status).toBe(404);
   });
   it("keeps a durable project when its checkout disappears", async () => {
     const project = await create();

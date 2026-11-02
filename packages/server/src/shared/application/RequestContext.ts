@@ -1,6 +1,6 @@
 import type { Actor } from "./Actor.js";
 
-export type RequestContext = Readonly<{ requestId: string; actor: Actor }>;
+export type RequestContext = Readonly<{ requestId: string; actor: Actor; workspaceId?: string }>;
 /** Stable keys for future Kushibot scope mapping; no runtime dependency. */
 export type WorkspaceScope = Readonly<{
   actorId: string;
