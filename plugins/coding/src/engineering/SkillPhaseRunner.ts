@@ -1,7 +1,7 @@
 import Joi from "joi";
 import { SkillScheduler, type IExecutionContext, type SkillDescriptor } from "kushibot";
 import type { AssignmentRunner } from "../assignments/AssignmentRunner";
-import { StepStopped } from "../assignments/StepSignals";
+import { StepStopped } from "../assignments/StepStopped";
 import { decisionText, type RunContext } from "../context/RunContext";
 import type { SkillDefinition, SkillPhase } from "./types";
 

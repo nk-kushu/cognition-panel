@@ -1,30 +1,29 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+
 import os from "node:os";
+
 import path from "node:path";
+
 import type { TestContext } from "node:test";
-import type { DecisionOutcome, DecisionRequest, IDecisionUnit, JsonValue } from "kushibot";
+
+import type { DecisionRequest, JsonValue } from "kushibot";
+
 import type { ChatHostContext } from "../../src/integrations/kushex/ChatRequest";
+
 import { runChat } from "../../src/integrations/kushex/chat";
+
 import { RunDirectory } from "../../src/infrastructure/run/RunDirectory";
+
 import { RunState, type WaitAnswer } from "../../src/context/RunState";
+
 import { SandboxedCli } from "../../src/infrastructure/sandbox/SandboxedCli";
+
 import type { ScriptedGateway } from "./ScriptedGateway";
+
+import { FakeDecisions } from "./FakeDecisions";
 import { profile } from "./ScriptedGateway";
 
-type Decide = (request: DecisionRequest) => string | null;
-
-/** Answers JEV's questions from the test; null abstains. Records what was asked. */
-export class FakeDecisions implements IDecisionUnit {
-  readonly asked: string[] = [];
-  constructor(private readonly decide: Decide) {}
-  async evaluate(request: DecisionRequest): Promise<DecisionOutcome> {
-    this.asked.push(request.purpose);
-    const choice = this.decide(request);
-    return choice === null
-      ? { status: "abstained" }
-      : { status: "answered", answer: { kind: "answered", choice, supportingRefs: [] } };
-  }
-}
+export type Decide = (request: DecisionRequest) => string | null;
 
 export const defaultDecisions: Decide = (request) =>
   ({

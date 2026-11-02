@@ -29,7 +29,6 @@ services:
       - ../apps/standalone/vite.config.ts:/app/apps/standalone/vite.config.ts
       - ../plugins:/app/plugins:ro
       - ../packages/ui/src:/app/packages/ui/src
-      - ../packages/workflow-ui/src:/app/packages/workflow-ui/src
       - ../packages/contracts/src:/app/packages/contracts/src
 
   migrate:

@@ -3,10 +3,11 @@
   "compilerOptions": {
     "noEmit": true,
     "baseUrl": ".",
-    "paths": { "kushibot": ["../../../kushibot/dist/index"] },
+    "paths": {
+      "kushibot": ["../../../kushibot/dist/index"]
+    },
     "types": ["node"],
     "typeRoots": ["../../packages/server/node_modules/@types"]
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["./ui/**"]
+  "include": ["./**/*.ts"]
 }

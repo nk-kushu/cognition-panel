@@ -1,5 +1,6 @@
 import type { IExecutionContext } from "kushibot";
-import { ReturnRequest, StepStopped } from "../../assignments/StepSignals";
+import { ReturnRequest } from "../../assignments/ReturnRequest";
+import { StepStopped } from "../../assignments/StepStopped";
 import { decisionText, digestOf, type RunContext } from "../../context/RunContext";
 
 /** Sends a guard or test failure to whichever step can actually resolve it. */

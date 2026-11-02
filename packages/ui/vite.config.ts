@@ -14,7 +14,6 @@ export default defineConfig({
     dedupe: ["react", "react-dom", "antd"],
     alias: {
       "@kushex/ui": new URL("./src/index.ts", import.meta.url).pathname,
-      "@kushex/workflow-ui": new URL("../workflow-ui/src/index.ts", import.meta.url).pathname,
     },
   },
   build: {

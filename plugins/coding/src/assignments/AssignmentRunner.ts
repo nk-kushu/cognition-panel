@@ -13,12 +13,11 @@ import { createHash } from "node:crypto";
 import type { ModelRole } from "../CodingAgentOptions";
 import type { RunContext } from "../context/RunContext";
 import { CliTool, type CliAccess } from "../tools/CliTool";
-import {
-  AssignmentEnvelopeContract,
-  ENVELOPE_INSTRUCTIONS,
-  type AssignmentEnvelope,
-} from "./AssignmentEnvelope";
-import { ReturnRequest, StepStopped, WaitRequest } from "./StepSignals";
+import { ENVELOPE_INSTRUCTIONS, type AssignmentEnvelope } from "./AssignmentEnvelope";
+import { AssignmentEnvelopeContract } from "./AssignmentEnvelopeContract";
+import { ReturnRequest } from "./ReturnRequest";
+import { StepStopped } from "./StepStopped";
+import { WaitRequest } from "./WaitRequest";
 
 export type Assignment<TResult> = Readonly<{
   id: string;

@@ -12,7 +12,6 @@ RUN npm install --global pnpm@9.12.1
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/standalone/package.json apps/standalone/package.json
 COPY packages/ui/package.json packages/ui/package.json
-COPY packages/workflow-ui/package.json packages/workflow-ui/package.json
 COPY packages/embed/package.json packages/embed/package.json
 COPY packages/server/package.json packages/server/package.json
 COPY packages/contracts/package.json packages/contracts/package.json

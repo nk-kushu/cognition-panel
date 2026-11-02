@@ -1,19 +1,19 @@
-import { createHash } from "node:crypto";
 import {
   WorkspaceEvidence,
   type AgentRunRuntime,
-  type EditingResult,
   type DecisionOutcome,
   type DecisionRequest,
+  type EditingResult,
   type IArtifactWriter,
   type ICliExecutor,
   type IDecisionUnit,
   type IExecutionContext,
   type JsonValue,
 } from "kushibot";
+import { createHash } from "node:crypto";
+import { StepStopped } from "../assignments/StepStopped";
 import type { IModelBindings, PinnedRun } from "../CodingAgentOptions";
 import type { WorkingCopy } from "../infrastructure/workspace/WorkingCopy";
-import { StepStopped } from "../assignments/StepSignals";
 import type { RunArtifacts } from "./RunArtifacts";
 import type { RunState } from "./RunState";
 

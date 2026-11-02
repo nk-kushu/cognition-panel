@@ -1,0 +1,62 @@
+# Model selection for the coding workflow, in WorkflowGraph.ts execution order.
+# Configuration only: the runtime does not load this file yet.
+# Providers: codex-cli (OpenAI Codex CLI) or openrouter (OpenRouter API).
+# Use a bare model ID; keep the provider separate from the model.
+# OpenRouter example:
+#   provider: openrouter
+#   model: openai/gpt-4.1
+# null means the step has no selectable LLM; it does not inherit defaults.
+
+defaults: &default-model
+  provider: codex-cli
+  model: gpt-6.1-sol
+
+steps:
+  # JEV selects the mode; its dedicated model is configured separately.
+  mode: null
+
+  answer-prepare:
+    <<: *default-model
+
+  answer-investigate:
+    <<: *default-model
+
+  # Includes skill scheduling and skill execution.
+  answer-write:
+    <<: *default-model
+
+  plan-investigation:
+    <<: *default-model
+
+  # Discovery and file reading use this model; file selection uses JEV.
+  investigate:
+    <<: *default-model
+
+  # Includes skill scheduling and skill execution.
+  plan-implementation:
+    <<: *default-model
+
+  write-tests:
+    <<: *default-model
+
+  # Includes skills and model-based skeleton guards.
+  skeleton:
+    <<: *default-model
+
+  human-review: null
+
+  # Includes skill scheduling and skill execution.
+  implement:
+    <<: *default-model
+
+  # Applies to model reviews; deterministic guards still run commands.
+  guards:
+    <<: *default-model
+
+  run-tests: null
+
+# Override either field on any model-driven step, for example:
+#   implement:
+#     <<: *default-model
+#     provider: openrouter
+#     model: openai/gpt-4.1

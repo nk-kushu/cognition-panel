@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  CodingModelFactory,
-  OpenRouterTransport,
-} from "../src/integrations/kushex/OpenRouterModels";
-import { defaultCodingSettings } from "../src/engineering/types";
 import type { IModelBindings } from "../src/CodingAgentOptions";
+import { defaultCodingSettings } from "../src/engineering/types";
+import { CodingModelFactory } from "../src/integrations/kushex/CodingModelFactory";
+import { OpenRouterTransport } from "../src/integrations/kushex/OpenRouterTransport";
 
 const fallback: IModelBindings = {
   bind: () => {

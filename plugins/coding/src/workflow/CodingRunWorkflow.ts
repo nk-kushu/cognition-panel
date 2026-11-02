@@ -9,18 +9,16 @@ import {
 } from "kushibot";
 import { stat } from "node:fs/promises";
 import path from "node:path";
-import type { CodingAgentOptions } from "../CodingAgentOptions";
 import { AssignmentRunner } from "../assignments/AssignmentRunner";
+import type { CodingAgentOptions } from "../CodingAgentOptions";
 import { RunArtifacts } from "../context/RunArtifacts";
 import { RunContext } from "../context/RunContext";
 import type { RunState } from "../context/RunState";
 import { SkillPhaseRunner } from "../engineering/SkillPhaseRunner";
 import { WorkingCopy } from "../infrastructure/workspace/WorkingCopy";
-import {
-  AnswerInvestigateStep,
-  AnswerPrepareStep,
-  AnswerWriteStep,
-} from "../steps/answer/AnswerSteps";
+import { AnswerInvestigateStep } from "../steps/answer/AnswerInvestigateStep";
+import { AnswerPrepareStep } from "../steps/answer/AnswerPrepareStep";
+import { AnswerWriteStep } from "../steps/answer/AnswerWriteStep";
 import { ImplementStep } from "../steps/editing/ImplementStep";
 import { FailureRouter } from "../steps/guards/FailureRouter";
 import { GuardPass } from "../steps/guards/GuardPass";

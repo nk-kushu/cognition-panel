@@ -139,12 +139,7 @@ describe("project workspace skills in PostgreSQL", () => {
     const firstContext = { ...operator, workspaceId: project.workspace.id };
     const secondContext = { ...operator, workspaceId: second.id };
     const service = configuration();
-    const defaults = JSON.parse(
-      await readFile(
-        new URL("../../../../plugins/coding/ui/settings.json", import.meta.url),
-        "utf8",
-      ),
-    ).defaults;
+    const defaults = { limits: { clarifications: 3 } };
     const first = await service.saveSettings(firstContext, project.id, "coding", defaults, 0);
     const other = await service.saveSettings(
       secondContext,

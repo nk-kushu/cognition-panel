@@ -1,5 +1,5 @@
 import type { IExecutionContext } from "kushibot";
-import { StepStopped } from "../../assignments/StepSignals";
+import { StepStopped } from "../../assignments/StepStopped";
 import type { RunContext } from "../../context/RunContext";
 import type { TestSuite } from "../../engineering/types";
 import type { ICodingStep } from "../../workflow/CodingStep";

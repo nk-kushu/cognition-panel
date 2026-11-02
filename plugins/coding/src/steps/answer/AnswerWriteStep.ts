@@ -1,18 +1,19 @@
 import Joi from "joi";
-import type { IExecutionContext } from "kushibot";
-import type { AssignmentRunner } from "../../assignments/AssignmentRunner";
-import { ReturnRequest, StepStopped } from "../../assignments/StepSignals";
-import type { RunContext } from "../../context/RunContext";
-import type { SkillPhaseRunner } from "../../engineering/SkillPhaseRunner";
-import type { ICodingStep } from "../../workflow/CodingStep";
-import type { Investigator } from "../investigation/Investigator";
-import { guidanceFor } from "../instructions";
-import type { QuestionPlanner } from "../investigation/QuestionPlanner";
 
-const PREPARE = `Work out what must be checked in this project's code to answer the user.
-The conversation and project preferences may already answer it, but claims about the current
-code must be checked against the code. Return {"questions":[{"question":"...","why":"..."}]},
-at most 4; return no questions only when the answer needs no facts about the code.`;
+import type { IExecutionContext } from "kushibot";
+
+import type { AssignmentRunner } from "../../assignments/AssignmentRunner";
+
+import { ReturnRequest } from "../../assignments/ReturnRequest";
+import { StepStopped } from "../../assignments/StepStopped";
+
+import type { RunContext } from "../../context/RunContext";
+
+import type { SkillPhaseRunner } from "../../engineering/SkillPhaseRunner";
+
+import type { ICodingStep } from "../../workflow/CodingStep";
+
+import { guidanceFor } from "../instructions";
 
 const WRITE = `Answer the user simply. Start with the direct answer, in short sentences and familiar words.
 For a question about a function use exactly:
@@ -22,49 +23,6 @@ For a question about a function use exactly:
 Base every step on the findings. Mark invented names and sample values as illustrative. If no caller was found, say so instead of inventing a call chain.
 Link source files. State clearly anything unresolved. If a code fix looks needed, explain it and wait: never offer it as done.
 Return {"answer":"markdown"}.`;
-
-/** Fast path: read-only by construction, with its own bounded rounds in this one step. */
-export class AnswerPrepareStep implements ICodingStep {
-  readonly id = "answer-prepare";
-  readonly branch = "answer-only" as const;
-
-  constructor(
-    private readonly run: RunContext,
-    private readonly planner: QuestionPlanner,
-  ) {}
-
-  async execute(context: IExecutionContext): Promise<string> {
-    const planned = await this.planner.plan(PREPARE, 0, context);
-    return planned ? `${planned} questions to check.` : "No investigation is needed.";
-  }
-}
-
-export class AnswerInvestigateStep implements ICodingStep {
-  readonly id = "answer-investigate";
-  readonly branch = "answer-only" as const;
-
-  constructor(
-    private readonly run: RunContext,
-    private readonly investigator: Investigator,
-  ) {}
-
-  async execute(context: IExecutionContext): Promise<string> {
-    const { state, pinned } = this.run;
-    for (let round = 0; round < pinned.settings.limits.answerRounds; round++) {
-      if (!state.data.questions.some((item) => item.status === "open")) break;
-      // Repeating a search that found nothing new cannot help.
-      if (!(await this.investigator.round(context))) break;
-    }
-    const open = state.data.questions.filter((item) => item.status === "open");
-    if (open.length)
-      await state.update((data) => {
-        data.questions = data.questions.map((item) =>
-          item.status === "open" ? { ...item, status: "unresolved" } : item,
-        );
-      });
-    return `${state.data.findings.length} findings; ${open.length} questions unresolved.`;
-  }
-}
 
 export class AnswerWriteStep implements ICodingStep {
   readonly id = "answer-write";

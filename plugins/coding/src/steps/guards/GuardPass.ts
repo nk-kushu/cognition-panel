@@ -12,10 +12,12 @@ import {
   type IGuardCheck,
   type IGuardTargetVerifier,
 } from "kushibot";
-import { StepStopped } from "../../assignments/StepSignals";
+import { StepStopped } from "../../assignments/StepStopped";
 import { decisionText, type RunContext } from "../../context/RunContext";
 import type { GuardDefinition, GuardPhase } from "../../engineering/types";
-import { CommandGuardCheck, ModelGuardCheck, type GuardFeedback } from "./GuardChecks";
+import { CommandGuardCheck } from "./CommandGuardCheck";
+import { type GuardFeedback } from "./GuardChecks";
+import { ModelGuardCheck } from "./ModelGuardCheck";
 
 const SELECTION_BATCH = 8;
 

@@ -28,12 +28,6 @@ export default defineConfig(async ({ command }) => ({
     dedupe: ["react", "react-dom", "antd"],
     // Build the panel from source: HMR in dev, one Tailwind pass over the ui sources.
     alias: [
-      {
-        find: /^@kushex\/workflow-ui$/,
-        replacement: fileURLToPath(
-          new URL("../../packages/workflow-ui/src/index.ts", import.meta.url),
-        ),
-      },
       { find: /^@kushex\/ui$/, replacement: ui("index.ts") },
       { find: /^@kushex\/ui\/style\.css$/, replacement: ui("shared/styles/index.css") },
       { find: /^@kushex\/ui\/preflight\.css$/, replacement: ui("shared/styles/preflight.css") },

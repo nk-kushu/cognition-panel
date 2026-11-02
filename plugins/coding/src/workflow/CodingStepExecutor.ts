@@ -5,14 +5,12 @@ import {
   type IExecutor,
   type JsonValue,
 } from "kushibot";
-import {
-  ReturnRequest,
-  StepStopped,
-  WaitRequest,
-  type ReturnRoute,
-} from "../assignments/StepSignals";
+import { ReturnRequest } from "../assignments/ReturnRequest";
+import { StepStopped } from "../assignments/StepStopped";
+import { WaitRequest } from "../assignments/WaitRequest";
 import type { RunContext } from "../context/RunContext";
 import type { ICodingStep } from "./CodingStep";
+import { type ReturnRoute } from "./WorkflowGraph";
 
 /** What the engine stores for a step. Details live in the run state, keeping snapshots small. */
 export type StepResult =

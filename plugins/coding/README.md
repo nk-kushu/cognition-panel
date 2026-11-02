@@ -11,7 +11,6 @@ guards and tests. The design is in
 ## Folder structure
 
 - `agent.ts`: entry point; exports `chat` and the public API.
-- `ui.tsx`, `ui/`: browser-only workflow graph, settings, Skills, Guards and Memory panels.
 - `src/composition/`: builds one run's agent.
 - `src/workflow/`: the state machine, step executor and the policies that enforce limits.
   `WorkflowGraph.ts` is the browser-safe map of steps and returns: the engine builds its
@@ -103,29 +102,8 @@ JEV is TypeSafe's `systemOne` API. Set `KUSHEX_JEV_API_KEY`, and optionally `KUS
 with an explanation rather than guessing; choosing Explain or Change in the composer still
 works. File selection and optional guards then keep every candidate.
 
-Open **Configure** in the chat for the rest. All of it is saved per project and agent type:
-
-- **Workflow**: the state machine as a graph. Select a step or a coloured return path to edit
-  only what controls it: its limits, models, skills and guards. Limits and models wait for
-  _Save_; a skill or guard change saves a new version straight away. Model fields offer a
-  searchable OpenRouter catalog, matched by provider/model ID or display name. Roles are
-  shared between steps, and blank roles inherit the default. A skill or guard can select
-  its own model. Limit values are validated in the backend as well as the UI.
-- **Tests**: the test-writing prompt, test types, and the suites that run them. With no type
-  selected, tests are written but not run, and the result says so. A selected type with no
-  enabled suite stops a code change as blocked verification before tests are written.
-- **Skills** and **Guards**: created in the UI and versioned in PostgreSQL, scoped to the
-  project, its workspace, and the plugin agent type. Use **Add skill** or **Add guard**
-  to create a definition for this project.
-  A skill with an empty expected result is short guidance sent with
-  its phase's assignments; one with an expected result gets its own scheduled session.
-  A skill runs once in each of its phases, can require run results (`findings`, `plan`, `tests`,
-  `skeleton`, `approval`), and its result is checked against the expected result. The `answer`
-  phase covers the read-only branch; questions that need no investigation skip scheduling.
-  A guard runs on the skeleton before review, on the finished change, or both. Skeleton
-  findings use the skeleton revision limit.
-- **Memory**: this project's preferences. Answers can be saved here with _Remember for this
-  project_. A preference guides the agent; it does not enforce anything by itself.
+The coding plugin has no browser configuration panel. Runtime settings, skills, guards
+and memory remain supported through the server configuration API.
 
 ## Limits inherited from change review
 
@@ -149,8 +127,6 @@ no paid calls occur; the commands are real.
 
 ### OpenRouter models
 
-Save an encrypted OpenRouter API key in **Cognition Panel Settings → OpenRouter**, then use
-**Configure → Workflow**, select a model-using step, and search its **Models** dropdowns.
-Select a catalog entry and press **Save**. Blank roles inherit the default; existing
-Codex model selections are preserved. See [OpenRouter setup](../../docs/openrouter.md)
-for the server encryption key, database migration, and credential lifecycle.
+Save an encrypted OpenRouter API key in **Cognition Panel Settings → OpenRouter**.
+Model roles can be configured through the server configuration API. See
+[OpenRouter setup](../../docs/openrouter.md) for credential setup.

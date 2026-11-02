@@ -1,7 +1,8 @@
 import Joi from "joi";
 import type { IExecutionContext } from "kushibot";
 import type { AssignmentRunner } from "../../assignments/AssignmentRunner";
-import { StepStopped, WaitRequest } from "../../assignments/StepSignals";
+import { StepStopped } from "../../assignments/StepStopped";
+import { WaitRequest } from "../../assignments/WaitRequest";
 import { decisionText, digestOf, type RunContext } from "../../context/RunContext";
 import type { ImplementationPlan } from "../../context/RunState";
 import type { SkillPhaseRunner } from "../../engineering/SkillPhaseRunner";

@@ -1,5 +1,7 @@
 import type { IExecutionContext } from "kushibot";
-import { ReturnRequest, StepStopped, WaitRequest } from "../../assignments/StepSignals";
+import { ReturnRequest } from "../../assignments/ReturnRequest";
+import { StepStopped } from "../../assignments/StepStopped";
+import { WaitRequest } from "../../assignments/WaitRequest";
 import type { RunContext } from "../../context/RunContext";
 import { DeclarationCheck } from "../../infrastructure/workspace/DeclarationCheck";
 import type { ICodingStep } from "../../workflow/CodingStep";

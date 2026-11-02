@@ -7,7 +7,6 @@
   "files": [
     "kushex-plugin.json",
     "**/*.ts",
-    "**/*.tsx",
     "README.md"
   ],
   "scripts": {

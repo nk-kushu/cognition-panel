@@ -1,7 +1,7 @@
 import Joi from "joi";
 import type { IExecutionContext } from "kushibot";
 import type { AssignmentRunner } from "../../assignments/AssignmentRunner";
-import { ReturnRequest } from "../../assignments/StepSignals";
+import { ReturnRequest } from "../../assignments/ReturnRequest";
 import type { RunContext } from "../../context/RunContext";
 import type { ICodingStep } from "../../workflow/CodingStep";
 import type { Investigator } from "./Investigator";

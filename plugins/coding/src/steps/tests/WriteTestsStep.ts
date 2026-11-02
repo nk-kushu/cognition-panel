@@ -1,6 +1,6 @@
 import type { IExecutionContext } from "kushibot";
 import type { AssignmentRunner } from "../../assignments/AssignmentRunner";
-import { StepStopped } from "../../assignments/StepSignals";
+import { StepStopped } from "../../assignments/StepStopped";
 import type { RunContext } from "../../context/RunContext";
 import type { SkillPhaseRunner } from "../../engineering/SkillPhaseRunner";
 import { uncoveredTestTypes } from "../../engineering/types";

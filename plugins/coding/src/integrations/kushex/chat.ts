@@ -1,28 +1,18 @@
-import { CodingModelFactory } from "./OpenRouterModels";
-import { randomUUID } from "node:crypto";
-import os from "node:os";
-import path from "node:path";
 import {
   BoundedDecisionUnit,
-  CodexCliTextGatewayFactory,
   DecisionRequestContract,
   JsonValueContract,
   type AgentRunRuntime,
   type IAgentRunResult,
   type ICliExecutor,
   type JsonValue,
-  type ModelProfile,
 } from "kushibot";
-import { LocalChatArtifacts } from "./LocalChatArtifacts";
-import type { ChatRequest } from "./ChatRequest";
-import type {
-  CodingAgentOptions,
-  IModelBindings,
-  ModelRole,
-  PinnedRun,
-} from "../../CodingAgentOptions";
-import { RunState } from "../../context/RunState";
+import { randomUUID } from "node:crypto";
+import os from "node:os";
+import path from "node:path";
+import type { CodingAgentOptions, IModelBindings, PinnedRun } from "../../CodingAgentOptions";
 import { createCodingAgent } from "../../composition/createCodingAgent";
+import { RunState } from "../../context/RunState";
 import {
   defaultCodingSettings,
   type CodingSettings,
@@ -32,36 +22,14 @@ import { JevDecisionProvider } from "../../infrastructure/jev/JevDecisionProvide
 import { RunDirectory } from "../../infrastructure/run/RunDirectory";
 import { SandboxedCli } from "../../infrastructure/sandbox/SandboxedCli";
 import type { CodingResult } from "../../workflow/CodingRunWorkflow";
+import type { ChatRequest } from "./ChatRequest";
+import { CodexModels } from "./CodexModels";
+import { CodingModelFactory } from "./CodingModelFactory";
+import { LocalChatArtifacts } from "./LocalChatArtifacts";
 
 /** Stopped and failed runs keep their working copy for inspection, up to this many. */
 const KEPT_RUNS = 20;
 const GENERATED = "dist,build,coverage,.next,.nuxt,.output,.cache,.turbo,.vite";
-
-class CodexModels implements IModelBindings {
-  private readonly factory = new CodexCliTextGatewayFactory({
-    executable: process.env.CODEX_EXECUTABLE || undefined,
-    codexHome: process.env.CODEX_HOME || undefined,
-  });
-
-  constructor(private readonly settings: CodingSettings) {}
-
-  bind(role: ModelRole, override?: string) {
-    const { models } = this.settings;
-    const modelId =
-      override || models[role] || models.default || process.env.CODEX_MODEL || "gpt-6.1-sol";
-    const profile: ModelProfile = {
-      id: `coding-${role}`,
-      providerId: "codex-cli",
-      modelId,
-      contextTokens: 400_000,
-      maxOutputTokens: 16_000,
-      maxRequestBytes: 1_048_576,
-      maxResponseBytes: 1_048_576,
-      supportsPromptCacheKey: false,
-    };
-    return { gateway: this.factory.create(profile), profile };
-  }
-}
 
 const jevDecisions = (runtime: AgentRunRuntime) => {
   const json = new JsonValueContract();

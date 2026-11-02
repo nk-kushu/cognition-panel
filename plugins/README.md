@@ -155,7 +155,7 @@ variable together. Mount packages writable to save edits through the editor.
 
 A plugin may supply a browser-only `ui.tsx` default export satisfying `AgentUiPlugin`
 (from `@kushex/ui`). Its `id` matches the manifest plugin ID; `agents` maps agent
-IDs to React components accepting `AgentConfigurationProps`. See `coding/ui.tsx`.
+IDs to React components accepting `AgentConfigurationProps`.
 The standalone app discovers `plugins/*/ui.tsx` at build time; rebuild it after
 adding a frontend contribution. Embedded hosts import contributions and pass them
 to `<KushexPanel agentUiPlugins={[codingUi]} />`. Components share the host React
