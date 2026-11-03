@@ -39,3 +39,9 @@ by a consumer. Rebuild and reinstall after source changes.
 Custom browser configuration components can be supplied using `agentUiPlugins`, just
 as with `KushexPanel`. Server-side agents continue to be installed in Cognition's plugins
 directory. Creating a plugin still means adding its manifest and restarting that runtime.
+
+Hosts can pin an agent with `agentName`, supply a JSON `configuration`, or provide
+`getConfiguration: async () => configuration` to synchronize host context immediately
+before each send. `draftMessage: { id, text, autoSend?, resetConversation? }` accepts
+context actions from the host; each ID is consumed once. `autoSend` defaults to true.
+Active thread selection is restored on remount; live runs reconnect through the API.

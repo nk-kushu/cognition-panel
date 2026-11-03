@@ -67,6 +67,7 @@ const storageKey = (instanceId = "default") => `kushex:${instanceId}:runs`;
 type Persisted = Pick<RunsState, "breakpoints" | "watches"> & {
   agents: Record<string, string | null>;
   debugging?: Record<string, boolean>;
+  threads?: Record<string, string | null>;
 };
 
 export function restoreRuns(instanceId?: string): RunsState {
@@ -83,7 +84,7 @@ export function restoreRuns(instanceId?: string): RunsState {
         agentName,
         debugging: saved.debugging?.[projectId] ?? false,
         entries: [],
-        threadId: null,
+        threadId: saved.threads?.[projectId] ?? null,
       };
   } catch {
     // Corrupt preferences start over.
@@ -97,6 +98,9 @@ export function persistRuns(state: RunsState, instanceId?: string): void {
     watches: state.watches,
     agents: Object.fromEntries(
       Object.entries(state.chats).map(([projectId, chat]) => [projectId, chat.agentName]),
+    ),
+    threads: Object.fromEntries(
+      Object.entries(state.chats).map(([id, chat]) => [id, chat.threadId]),
     ),
     debugging: Object.fromEntries(
       Object.entries(state.chats).map(([id, chat]) => [id, chat.debugging]),
@@ -229,7 +233,12 @@ export const runsSlice = createSlice({
         pauses: 0,
         breakpoints: [],
       };
-      chatOf(state, run.projectId).entries.push({ id: entryId(), kind: "run", runId: run.id });
+      if (
+        !chatOf(state, run.projectId).entries.some(
+          (entry) => entry.kind === "run" && entry.runId === run.id,
+        )
+      )
+        chatOf(state, run.projectId).entries.push({ id: entryId(), kind: "run", runId: run.id });
       if (run.debug) {
         state.debugRunId = run.id;
         state.selectedFrame = 0;

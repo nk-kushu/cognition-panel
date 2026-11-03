@@ -10,6 +10,88 @@ beforeEach(() => {
   vi.stubGlobal("EventSource", FakeEventSource);
 });
 
+it("restores the selected conversation and reconnects an unfinished run once after remount", async () => {
+  const api = mockKushexApi([exampleProject], [exampleAgent]);
+  const time = "2026-11-02T12:00:00Z";
+  api.liveRuns.resumed = {
+    id: "resumed",
+    projectId: exampleProject.id,
+    agentName: "reviewer",
+    debug: true,
+    status: "paused",
+    startedAt: time,
+  };
+  api.threads.push({
+    id: "saved-thread",
+    projectId: exampleProject.id,
+    title: "Saved conversation",
+    createdAt: time,
+    updatedAt: time,
+    turns: [
+      {
+        id: "resumed",
+        agentName: "reviewer",
+        message: "Inspect this",
+        files: [],
+        debug: true,
+        createdAt: time,
+        events: [{ type: "status", status: "running" }],
+      },
+    ],
+  });
+  localStorage.setItem(
+    "kushex:restored:runs",
+    JSON.stringify({
+      agents: { [exampleProject.id]: "reviewer" },
+      threads: { [exampleProject.id]: "saved-thread" },
+      breakpoints: {},
+      watches: [],
+    }),
+  );
+  render(
+    <CognitionChat
+      instanceId="restored"
+      projectId={exampleProject.id}
+      cognitionPanelUrl="http://localhost:3050"
+    />,
+  );
+  await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
+  expect(screen.getAllByLabelText("reviewer run")).toHaveLength(1);
+  expect(screen.getByText("Inspect this")).toBeInTheDocument();
+  act(() => {
+    FakeEventSource.of("resumed").emit({
+      type: "result",
+      value: "Restored result",
+      truncated: false,
+    });
+    FakeEventSource.of("resumed").emit({ type: "status", status: "completed" });
+  });
+  expect(await screen.findByText("Restored result")).toBeInTheDocument();
+});
+
+it("uses the host's latest configuration and sends an incoming context draft once with the fixed agent", async () => {
+  const api = mockKushexApi([exampleProject], [exampleAgent]);
+  const getConfiguration = vi.fn(async () => ({ bridgeId: "updated-host-session" }));
+  const props = {
+    projectId: exampleProject.id,
+    cognitionPanelUrl: "http://localhost:3050",
+    agentName: exampleAgent.name,
+    getConfiguration,
+    draftMessage: { id: 42, text: "Explain this selected code", resetConversation: true },
+  };
+  const view = render(<CognitionChat {...props} />);
+  await waitFor(() => expect(api.runs).toHaveLength(1));
+  expect(api.runs[0]).toMatchObject({
+    agentName: "reviewer",
+    message: "Explain this selected code",
+    configuration: { bridgeId: "updated-host-session" },
+  });
+  expect(getConfiguration).toHaveBeenCalledTimes(1);
+  view.rerender(<CognitionChat {...props} />);
+  expect(api.runs).toHaveLength(1);
+  act(() => FakeEventSource.of("run-1").emit({ type: "status", status: "completed" }));
+});
+
 it("runs standalone chat on a selected runtime project and links to the exact remote debugger and traces", async () => {
   const api = mockKushexApi([exampleProject], [exampleAgent]);
   const user = userEvent.setup();

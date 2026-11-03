@@ -1,6 +1,6 @@
 import { Alert, Button, Collapse, Empty, Input, Select, Tag, Tooltip } from "antd";
 import { IconChevronRight } from "@tabler/icons-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useContext } from "react";
 import { ChatHostContext, PanelLink } from "./ChatHostContext";
 import type { AgentConfiguration, AgentRunStatus } from "@kushex/contracts";
@@ -86,9 +86,13 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
   const threads = useChatThreadsQuery(projectId);
   const [loadThread, loadingThread] = useLazyChatThreadQuery();
   const [createThread, creatingThread] = useCreateChatThreadMutation();
+  const loadedThread = useRef<string | null>(null);
+  const selectionGeneration = useRef(0);
   const [threadError, setThreadError] = useState<string | null>(null);
   const chat = useAppSelector((state) => selectChat(state, projectId));
   const [text, setText] = useState("");
+  const [preparing, setPreparing] = useState(false);
+  const sending = useRef(false);
   const [files, setFiles] = useState<readonly string[]>([]);
   const [attaching, setAttaching] = useState(false);
   const [start, starting] = useStartAgentRunMutation();
@@ -106,63 +110,182 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
     bottomRef.current?.scrollIntoView?.({ block: "end" });
   }, [chat.entries.length]);
 
-  const send = async (debug = chat.debugging) => {
-    const message = text.trim();
-    if (!message || !agentName || starting.isLoading || activeDebug || stoppingDebug.isLoading)
-      return;
-    // Read shared preferences before messageSent persists this tab's chat state.
-    const breakpoints = debug ? (dispatch(refreshBreakpointPreferences())[agentName] ?? {}) : {};
-    try {
-      const threadId = chat.threadId ?? (await createThread(projectId).unwrap()).id;
-      if (!chat.threadId) dispatch(threadSelected({ projectId, threadId }));
-      dispatch(messageSent({ projectId, text: message, files, debug }));
-      setText("");
-      const run = await start({
-        projectId,
-        threadId,
-        agentName,
-        message,
-        ...(configurations[agentName] ? { configuration: configurations[agentName] } : {}),
-        files,
-        debug,
-        ...(debug ? { breakpoints, ...(host.pauseOnEntry ? { pauseOnEntry: true } : {}) } : {}),
-      }).unwrap();
-      dispatch(runStarted(run));
-      dispatch(kushexApi.util.invalidateTags(["ChatThreads"]));
-    } catch (failure) {
-      dispatch(runStartFailed({ projectId, text: errorMessage(failure) }));
-    }
-  };
-
-  const selectThread = async (id: string) => {
-    setThreadError(null);
-    try {
-      const thread = await loadThread({ projectId, id }, false).unwrap();
-      dispatch(threadSelected({ projectId, threadId: id }));
-      for (const turn of thread.turns) {
-        dispatch(
-          restoredTurn({
-            projectId,
-            text: turn.message,
-            files: turn.files,
-            run: {
-              id: turn.id,
-              projectId,
-              agentName: turn.agentName,
-              debug: turn.debug,
-              status: "starting",
-              startedAt: turn.createdAt,
-            },
-          }),
-        );
-        for (const event of turn.events) dispatch(runEventReceived({ runId: turn.id, event }));
-        if (!turn.events.some((event) => event.type === "status" && isFinished(event.status)))
-          dispatch(runStreamFailed(turn.id));
+  const send = useCallback(
+    async (debug = chat.debugging, messageText = text, newThread = false) => {
+      const message = messageText.trim();
+      if (
+        !message ||
+        !agentName ||
+        sending.current ||
+        starting.isLoading ||
+        activeDebug ||
+        stoppingDebug.isLoading
+      )
+        return;
+      if (newThread) selectionGeneration.current++;
+      sending.current = true;
+      setPreparing(true);
+      // Read shared preferences before messageSent persists this tab's chat state.
+      const breakpoints = debug ? (dispatch(refreshBreakpointPreferences())[agentName] ?? {}) : {};
+      try {
+        const hostConfiguration = host.getConfiguration
+          ? await host.getConfiguration()
+          : host.configuration;
+        const threadId =
+          (!newThread && chat.threadId) || (await createThread(projectId).unwrap()).id;
+        if (newThread || !chat.threadId) dispatch(threadSelected({ projectId, threadId }));
+        dispatch(messageSent({ projectId, text: message, files, debug }));
+        setText("");
+        const run = await start({
+          projectId,
+          threadId,
+          agentName,
+          message,
+          ...(hostConfiguration || configurations[agentName]
+            ? { configuration: { ...hostConfiguration, ...configurations[agentName] } }
+            : {}),
+          files,
+          debug,
+          ...(debug ? { breakpoints, ...(host.pauseOnEntry ? { pauseOnEntry: true } : {}) } : {}),
+        }).unwrap();
+        dispatch(runStarted(run));
+        dispatch(kushexApi.util.invalidateTags(["ChatThreads"]));
+      } catch (failure) {
+        dispatch(runStartFailed({ projectId, text: errorMessage(failure) }));
+      } finally {
+        sending.current = false;
+        setPreparing(false);
       }
-    } catch (failure) {
-      setThreadError(errorMessage(failure));
-    }
-  };
+    },
+    [
+      chat.debugging,
+      chat.threadId,
+      text,
+      agentName,
+      starting.isLoading,
+      activeDebug,
+      stoppingDebug.isLoading,
+      dispatch,
+      createThread,
+      projectId,
+      start,
+      configurations,
+      host,
+      files,
+    ],
+  );
+
+  const appliedDraft = useRef<string | number | null>(null);
+  useEffect(() => {
+    const draft = host.draftMessage;
+    if (
+      !draft ||
+      appliedDraft.current === draft.id ||
+      !known ||
+      starting.isLoading ||
+      activeDebug ||
+      loadingThread.isFetching
+    )
+      return;
+    if (
+      !draft.resetConversation &&
+      chat.threadId &&
+      !chat.entries.length &&
+      loadedThread.current !== chat.threadId
+    )
+      return;
+    // Deliver the host command after the current project/thread synchronization. A
+    // cancelled mount (including StrictMode's probe) must not send the draft twice.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      appliedDraft.current = draft.id;
+      if (draft.resetConversation) dispatch(chatCleared(projectId));
+      if (draft.autoSend !== false) void send(chat.debugging, draft.text, draft.resetConversation);
+      else setText(draft.text);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    host.draftMessage,
+    known,
+    starting.isLoading,
+    activeDebug,
+    send,
+    chat.debugging,
+    chat.threadId,
+    chat.entries.length,
+    loadingThread.isFetching,
+    dispatch,
+    projectId,
+  ]);
+
+  const selectThread = useCallback(
+    async (id: string) => {
+      loadedThread.current = id;
+      const generation = ++selectionGeneration.current;
+      setThreadError(null);
+      try {
+        const thread = await loadThread({ projectId, id }, false).unwrap();
+        if (generation !== selectionGeneration.current) return;
+        dispatch(threadSelected({ projectId, threadId: id }));
+        for (const turn of thread.turns) {
+          dispatch(
+            restoredTurn({
+              projectId,
+              text: turn.message,
+              files: turn.files,
+              run: {
+                id: turn.id,
+                projectId,
+                agentName: turn.agentName,
+                debug: turn.debug,
+                status: "starting",
+                startedAt: turn.createdAt,
+              },
+            }),
+          );
+          for (const event of turn.events) dispatch(runEventReceived({ runId: turn.id, event }));
+          if (!turn.events.some((event) => event.type === "status" && isFinished(event.status))) {
+            const lookup = dispatch(
+              kushexApi.endpoints.agentRun.initiate(turn.id, {
+                subscribe: false,
+                forceRefetch: true,
+              }),
+            );
+            try {
+              const live = await lookup.unwrap();
+              if (generation !== selectionGeneration.current) return;
+              if (!isFinished(live.status)) dispatch(runStarted(live));
+              else
+                dispatch(
+                  runEventReceived({
+                    runId: turn.id,
+                    event: { type: "status", status: live.status },
+                  }),
+                );
+            } catch {
+              dispatch(runStreamFailed(turn.id));
+            }
+          }
+        }
+      } catch (failure) {
+        setThreadError(errorMessage(failure));
+      }
+    },
+    [loadThread, projectId, dispatch],
+  );
+
+  useEffect(() => {
+    if (
+      !sending.current &&
+      chat.threadId &&
+      !chat.entries.length &&
+      loadedThread.current !== chat.threadId
+    )
+      void selectThread(chat.threadId);
+  }, [chat.threadId, chat.entries.length, selectThread, preparing]);
 
   const toggleDebugging = async () => {
     stoppingDebug.reset();
@@ -180,6 +303,7 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
 
   const debugging = Boolean(chat.debugging || activeDebug);
   const canSend =
+    !preparing &&
     !!text.trim() &&
     !!agentName &&
     !activeDebug &&
@@ -290,6 +414,7 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
             </Tooltip>
             <Select
               aria-label="Agent"
+              disabled={Boolean(host.agentName)}
               size="small"
               variant="filled"
               popupMatchSelectWidth={false}

@@ -49,7 +49,9 @@ services:
       HOST: 0.0.0.0
       PORT: "3000"
       DATABASE_URL: *database-url
-      KUSHEX_WORKSPACES_ROOT: /workspaces
+      KUSHEX_WORKSPACES_ROOT: /workspaces,/kushi-projects,/kushi-worktrees,/plugins/kushi-control-panel/agents
+      KUSHI_CONTROL_PANEL_URL: ${KUSHI_CONTROL_PANEL_URL:-http://host.docker.internal:3030}
+      KUSHI_NETWORK_HOSTNAME: host.docker.internal
       KUSHEX_PLUGINS_DIR: /plugins
       KUSHEX_KUSHIBOT_DIR: /app/node_modules/kushibot
       KUSHEX_ARTIFACTS_DIR: /var/lib/kushex/artifacts
@@ -82,6 +84,10 @@ services:
           create_host_path: false
       # Retain recorded changes across backend rebuilds and restarts.
       - coding-artifacts:/var/lib/kushex
+      # Reuse the control panel's checked-out agent sources and the same repository roots.
+      - ../../kushi-control-panel:/plugins/kushi-control-panel
+      - ${AGENTIC_AI_HOST_ROOT:-/Users/niki/projects/cms4}:/kushi-projects
+      - ${KUSHIGIT_WORKTREES_HOST_ROOT:-${HOME}/repos/.kushigit-worktrees}:/kushi-worktrees
       # Plugin packages; writable so the agent editor can save source files.
       - type: bind
         source: ../plugins

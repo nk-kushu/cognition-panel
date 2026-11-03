@@ -116,6 +116,7 @@ export class AgentRunService implements ManagedResource {
       agentDirectory: entry.directory,
       workspace: checkout.absolute,
       message: request.message,
+      threadId: request.threadId,
       files: request.files,
       configuration: request.configuration ?? {},
       ...(credentials ? { credentials } : {}),

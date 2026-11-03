@@ -7,6 +7,7 @@ export type RunnerCommand =
       entry: string;
       workspace: string;
       message: string;
+      threadId?: string;
       configuration?: AgentConfiguration;
       pauseOnEntry?: boolean;
       files: readonly string[];

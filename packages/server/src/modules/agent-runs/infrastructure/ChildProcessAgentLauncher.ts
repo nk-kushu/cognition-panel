@@ -110,6 +110,7 @@ export class ChildProcessAgentLauncher implements AgentLauncher {
         entry: launch.entry,
         workspace: launch.workspace,
         message: launch.message,
+        threadId: launch.threadId,
         files: launch.files,
         configuration: launch.configuration ?? {},
         pauseOnEntry: debug && launch.pauseOnEntry === true,

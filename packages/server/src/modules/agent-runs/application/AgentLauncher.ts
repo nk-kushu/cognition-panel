@@ -18,6 +18,7 @@ export type AgentLaunch = Readonly<{
   /** Absolute path of the project checkout; the agent's working directory. */
   workspace: string;
   message: string;
+  threadId?: string;
   configuration?: AgentConfiguration;
   files: readonly string[];
   /** Project data for the agent, loaded here because its process has no database access. */

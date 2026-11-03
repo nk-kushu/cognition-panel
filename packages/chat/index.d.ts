@@ -28,5 +28,13 @@ export type CognitionChatProps = Readonly<{
   projectId?: string;
   workspaceId?: string;
   agentName?: string;
+  configuration?: AgentConfiguration;
+  getConfiguration?: () => Promise<AgentConfiguration>;
+  draftMessage?: Readonly<{
+    id: string | number;
+    text: string;
+    autoSend?: boolean;
+    resetConversation?: boolean;
+  }>;
 }>;
 export declare function CognitionChat(props: CognitionChatProps): ReactElement;

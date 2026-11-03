@@ -1,11 +1,21 @@
 import { Button, type ButtonProps } from "antd";
 import { createContext, useContext } from "react";
+import type { AgentConfiguration } from "@kushex/contracts";
 import { useNavigate } from "react-router";
 
 export const ChatHostContext = createContext<
   Readonly<{
     cognitionPanelUrl?: string;
     pauseOnEntry?: boolean;
+    configuration?: AgentConfiguration;
+    getConfiguration?: () => Promise<AgentConfiguration>;
+    agentName?: string;
+    draftMessage?: Readonly<{
+      id: string | number;
+      text: string;
+      autoSend?: boolean;
+      resetConversation?: boolean;
+    }>;
   }>
 >({});
 

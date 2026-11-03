@@ -12,6 +12,7 @@ import {
   selectProjectId,
   workspaceSelected,
 } from "./features/workbench/workbenchSlice";
+import type { AgentConfiguration } from "@kushex/contracts";
 import type { KushexPanelOptions } from "./types";
 
 export type CognitionChatProps = Pick<
@@ -31,11 +32,22 @@ export type CognitionChatProps = Pick<
     projectId?: string;
     workspaceId?: string;
     agentName?: string;
+    configuration?: AgentConfiguration;
+    getConfiguration?: () => Promise<AgentConfiguration>;
+    draftMessage?: Readonly<{
+      id: string | number;
+      text: string;
+      autoSend?: boolean;
+      resetConversation?: boolean;
+    }>;
   }>;
 
 /** Installable chat with its own store, theme and router; no host Redux setup required. */
 export function CognitionChat({
   cognitionPanelUrl,
+  configuration,
+  getConfiguration,
+  draftMessage,
   projectId,
   workspaceId,
   agentName,
@@ -43,7 +55,16 @@ export function CognitionChat({
 }: CognitionChatProps) {
   return (
     <KushexProvider {...options} router="memory">
-      <ChatHostContext value={{ cognitionPanelUrl, pauseOnEntry: true }}>
+      <ChatHostContext
+        value={{
+          cognitionPanelUrl,
+          pauseOnEntry: true,
+          configuration,
+          getConfiguration,
+          draftMessage,
+          agentName,
+        }}
+      >
         <ChatWorkspace projectId={projectId} workspaceId={workspaceId} agentName={agentName} />
       </ChatHostContext>
     </KushexProvider>
