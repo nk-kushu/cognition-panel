@@ -40,7 +40,7 @@ function ChatThreadsPage() {
   return <Panes main={<ChatThreadsScreen projectId={projectId} />} chat />;
 }
 
-/** A chat run's debug events, next to the project's chat so new runs stay in reach. */
+/** A chat run's debug events in a dedicated panel. */
 function RunDebugEventsPage() {
   const dispatch = useAppDispatch();
   const { projectId = "", runId = "" } = useParams();
@@ -50,7 +50,7 @@ function RunDebugEventsPage() {
   }, [current, projectId, dispatch]);
   if (current !== projectId) return null;
   return (
-    <Panes main={<DebugEventsScreen key={runId} projectId={projectId} runId={runId} />} chat />
+    <Panes main={<DebugEventsScreen key={runId} projectId={projectId} runId={runId} />} />
   );
 }
 

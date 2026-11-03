@@ -37,7 +37,7 @@ function WideLayout({ screen }: Readonly<{ screen: Screen }>) {
 
 function NarrowLayout({ screen }: Readonly<{ screen: Screen }>) {
   const view = useAppSelector(selectMobileView);
-  const region = view === "chat" ? <ChatPanel /> : view === "side" && screen.side ? screen.side : screen.main;
+  const region = view === "chat" && screen.chat ? <ChatPanel /> : view === "side" && screen.side ? screen.side : screen.main;
   return <main className="kx:min-w-0 kx:flex-1 kx:overflow-auto">{region}</main>;
 }
 
