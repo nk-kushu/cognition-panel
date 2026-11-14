@@ -102,7 +102,8 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
     debugRun?.projectId === projectId && !isFinished(debugRun.status) ? debugRun : null;
   const bottomRef = useRef<HTMLDivElement>(null);
   const [configurations, setConfigurations] = useState<Record<string, AgentConfiguration>>({});
-  const agentName = chat.agentName;
+  // A host-fixed specialist keeps its identity even when an older thread belongs to another agent.
+  const agentName = host.agentName || chat.agentName;
   const selectedAgent = agents.data?.entries.find((agent) => agent.name === agentName);
   const known = !!agentName && !!agents.data?.entries.some((agent) => agent.name === agentName);
 
@@ -221,6 +222,7 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
     projectId,
   ]);
 
+  /** Restores a conversation, discarding a saved selection only when the server confirms it is gone. */
   const selectThread = useCallback(
     async (id: string) => {
       loadedThread.current = id;
@@ -271,6 +273,12 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
           }
         }
       } catch (failure) {
+        if (generation !== selectionGeneration.current) return;
+        if (failure && typeof failure === "object" && "status" in failure && failure.status === 404) {
+          loadedThread.current = null;
+          dispatch(chatCleared(projectId));
+          return;
+        }
         setThreadError(errorMessage(failure));
       }
     },
@@ -321,8 +329,14 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
             <Button
               type="text"
               size="small"
-              disabled={chat.entries.length === 0}
-              onClick={() => dispatch(chatCleared(projectId))}
+              disabled={!chat.threadId && chat.entries.length === 0}
+              onClick={() => {
+                // Invalidate a pending restore so its response cannot reopen the old chat.
+                selectionGeneration.current++;
+                loadedThread.current = null;
+                setThreadError(null);
+                dispatch(chatCleared(projectId));
+              }}
               icon={<AppIcon icon={NewChatIcon} label="New chat" />}
             />
           </Tooltip>

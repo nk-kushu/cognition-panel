@@ -277,12 +277,13 @@ export function mockKushexApi(
         threads.push(thread);
         return respond(thread, 201);
       }
-      if (request.method === "GET")
-        return respond(
-          id
-            ? threads.find((thread) => thread.id === id)
-            : threads.filter((thread) => thread.projectId === projectId),
-        );
+      if (request.method === "GET") {
+        if (!id) return respond(threads.filter((thread) => thread.projectId === projectId));
+        const thread = threads.find((thread) => thread.id === id && thread.projectId === projectId);
+        return thread
+          ? respond(thread)
+          : respond({ code: "NOT_FOUND", message: "Chat thread not found." }, 404);
+      }
       if (request.method === "DELETE") {
         for (let index = threads.length - 1; index >= 0; index--)
           if (threads[index]!.projectId === projectId && (!id || threads[index]!.id === id))

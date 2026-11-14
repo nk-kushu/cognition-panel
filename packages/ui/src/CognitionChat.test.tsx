@@ -10,6 +10,78 @@ beforeEach(() => {
   vi.stubGlobal("EventSource", FakeEventSource);
 });
 
+it("keeps the host's specialist when a restored conversation used another agent", async () => {
+  const other = { ...exampleAgent, name: "other-specialist" };
+  const api = mockKushexApi([exampleProject], [exampleAgent, other]);
+  const time = "2026-11-08T12:00:00Z";
+  api.threads.push({ id: "other-thread", projectId: exampleProject.id, title: "Earlier specialist",
+    createdAt: time, updatedAt: time, turns: [{ id: "old-run", agentName: other.name,
+      message: "Earlier work", files: [], debug: false, createdAt: time,
+      events: [{ type: "status", status: "completed" }] }] });
+  localStorage.setItem("kushex:fixed-specialist:runs", JSON.stringify({
+    agents: { [exampleProject.id]: other.name }, threads: { [exampleProject.id]: "other-thread" },
+    breakpoints: {}, watches: [],
+  }));
+  const user = userEvent.setup();
+  render(<CognitionChat instanceId="fixed-specialist" projectId={exampleProject.id}
+    cognitionPanelUrl="http://localhost:3050" agentName={exampleAgent.name} />);
+  expect(await screen.findByText("Earlier work")).toBeInTheDocument();
+  await user.type(screen.getByLabelText("Message"), "Use the selected specialist");
+  await user.click(screen.getByRole("button", { name: "Send" }));
+  await waitFor(() => expect(api.runs).toHaveLength(1));
+  expect(api.runs[0]).toMatchObject({ agentName: exampleAgent.name, threadId: "other-thread" });
+  act(() => FakeEventSource.of("run-1").emit({ type: "status", status: "completed" }));
+});
+
+it("recovers a missing saved thread and sends the next message in a new conversation", async () => {
+  const api = mockKushexApi([exampleProject], [exampleAgent]);
+  localStorage.setItem("kushex:missing-thread:runs", JSON.stringify({
+    agents: { [exampleProject.id]: "reviewer" },
+    threads: { [exampleProject.id]: "deleted-thread" },
+    breakpoints: {}, watches: [],
+  }));
+  const user = userEvent.setup();
+  render(<CognitionChat instanceId="missing-thread" projectId={exampleProject.id}
+    cognitionPanelUrl="http://localhost:3050" agentName="reviewer" />);
+
+  const message = await screen.findByLabelText("Message");
+  await waitFor(() => {
+    const saved = JSON.parse(localStorage.getItem("kushex:missing-thread:runs")!);
+    expect(saved.threads[exampleProject.id]).toBeFalsy();
+  });
+  expect(screen.queryByText("Chat thread not found.")).not.toBeInTheDocument();
+  await user.type(message, "Check Git status");
+  await user.click(screen.getByRole("button", { name: "Send" }));
+  await waitFor(() => expect(api.runs).toHaveLength(1));
+  expect(api.runs[0]).toMatchObject({ threadId: "thread-1", message: "Check Git status" });
+  act(() => FakeEventSource.of("run-1").emit({ type: "status", status: "completed" }));
+});
+
+it("keeps temporary restore failures visible and allows starting a new empty chat", async () => {
+  const api = mockKushexApi([exampleProject], [exampleAgent]);
+  localStorage.setItem("kushex:unavailable-thread:runs", JSON.stringify({
+    agents: { [exampleProject.id]: "reviewer" },
+    threads: { [exampleProject.id]: "saved-thread" },
+    breakpoints: {}, watches: [],
+  }));
+  const served = api.fetch.getMockImplementation()!;
+  api.fetch.mockImplementation(async (input) => (input instanceof Request ? input : new Request(input)).url.endsWith("/chat-threads/saved-thread")
+    ? Response.json({ message: "Temporarily unavailable" }, { status: 503 }) : served(input));
+  const user = userEvent.setup();
+  render(<CognitionChat instanceId="unavailable-thread" projectId={exampleProject.id}
+    cognitionPanelUrl="http://localhost:3050" agentName="reviewer" />);
+  expect(await screen.findByText("Temporarily unavailable")).toBeInTheDocument();
+  const saved = JSON.parse(localStorage.getItem("kushex:unavailable-thread:runs")!);
+  expect(saved.threads[exampleProject.id]).toBe("saved-thread");
+  await user.click(screen.getByRole("button", { name: "New chat" }));
+  expect(screen.queryByText("Temporarily unavailable")).not.toBeInTheDocument();
+  await user.type(screen.getByLabelText("Message"), "Start fresh");
+  await user.click(screen.getByRole("button", { name: "Send" }));
+  await waitFor(() => expect(api.runs).toHaveLength(1));
+  expect(api.runs[0]).toMatchObject({ threadId: "thread-1" });
+  act(() => FakeEventSource.of("run-1").emit({ type: "status", status: "completed" }));
+});
+
 it("restores the selected conversation and reconnects an unfinished run once after remount", async () => {
   const api = mockKushexApi([exampleProject], [exampleAgent]);
   const time = "2026-11-02T12:00:00Z";
