@@ -1,4 +1,4 @@
-name: kushex
+name: cognition-panel
 
 x-backend-build: &backend-build
   context: ..
