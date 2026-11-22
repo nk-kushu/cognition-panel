@@ -52,6 +52,12 @@ private server-to-runner IPC and are excluded from project configuration, pinned
 files, prompts and normal debug payloads. Missing keys or unavailable models fail with
 an actionable error; requests never silently fall back to a different provider.
 
+Every request sets OpenRouter's `provider` routing to `zdr: true` and
+`data_collection: "deny"`, so prompts reach only Zero Data Retention endpoints
+that do not store or train on them. A model with no compliant endpoint fails
+rather than falling back to one that is not. For stricter control (for example a
+provider allowlist), add a Guardrail to the API key in OpenRouter's settings.
+
 This integration changes the coding agent's model roles. JEV decisions still use the
 existing `KUSHEX_JEV_API_KEY` configuration. No additional OpenRouter SDK is needed.
 

@@ -74,6 +74,7 @@ test("a selected OpenRouter model completes a Kushibot call and reports usage", 
     assert.equal(request.model, "vendor/alias");
     assert.equal(request.store, false);
     assert.equal(request.stream, false);
+    assert.deepEqual(request.provider, { zdr: true, data_collection: "deny" });
     return Response.json({
       id: "gen_test",
       model: "vendor/canonical",
