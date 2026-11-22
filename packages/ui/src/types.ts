@@ -28,7 +28,22 @@ export type AgentUiPlugin = Readonly<{
   agents: Readonly<Record<string, ComponentType<AgentConfigurationProps>>>;
 }>;
 
+/** What the host is showing, so the panel can open it. */
+export type KushexPanelContext = Readonly<{
+  /** Directory to open as a project; the same path reuses its project. */
+  workspace: Readonly<{
+    name: string;
+    /** Workspace path: a configured root's name, then the directory, e.g. "templates/billing". */
+    path: string;
+    description?: string;
+  }>;
+  /** Workspace-relative file to open in the editor, e.g. "src/App.ts". */
+  openFile?: string;
+}>;
+
 export type KushexPanelOptions = Readonly<{
+  /** Open the host's project (and file) on mount instead of the Projects page. Read once at mount. */
+  context?: KushexPanelContext;
   /** Trusted frontend contributions, keyed by backend plugin and agent IDs. */
   agentUiPlugins?: readonly AgentUiPlugin[];
   /** Overrides the stored preference while set; changing it switches the theme live. */

@@ -8,6 +8,7 @@ export type {
   AgentConfigurationProps,
   AgentUiPlugin,
   ColorMode,
+  KushexPanelContext,
   KushexPanelHandle,
   KushexPanelOptions,
   RouterMode,

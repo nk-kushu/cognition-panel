@@ -1,0 +1,15 @@
+{
+  "id": "echo",
+  "name": "Echo Agent",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "agents": [
+    {
+      "id": "echo",
+      "name": "Echo",
+      "description": "Replies to the user's text. A minimal kushibot agent for wiring and debugging.",
+      "directory": ".",
+      "entry": "agent.ts"
+    }
+  ]
+}

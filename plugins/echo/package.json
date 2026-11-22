@@ -1,0 +1,14 @@
+{
+  "name": "@kushex/echo-plugin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cognition Panel echo agent plugin.",
+  "files": [
+    "kushex-plugin.json",
+    "**/*.ts"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

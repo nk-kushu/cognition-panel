@@ -93,6 +93,30 @@ describe("projects and files over HTTP", () => {
       await (await fetch(`${base}/projects/${project.id}/file?path=src%2Findex.ts`)).json(),
     ).toMatchObject({ kind: "text", content: "export const answer = 42;\n" });
   });
+  it("opens the existing project for a path, creating it only the first time", async () => {
+    const open = (path: string) =>
+      fetch(`${base}/projects/open`, {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({ name: "Alpha", path }),
+      });
+    const first = await open("root/alpha");
+    expect(first.status).toBe(201);
+    const project = (await first.json()) as ProjectDto;
+    const second = await open("root/alpha");
+    expect(second.status).toBe(200);
+    expect(await second.json()).toEqual(project);
+    const listed = (await (await fetch(`${base}/projects`)).json()) as { entries: unknown[] };
+    expect(listed.entries).toHaveLength(1);
+    const concurrent = await Promise.all([open("other/gamma"), open("other/gamma")]);
+    expect(concurrent.map((response) => response.status).sort()).toEqual([200, 201]);
+    const [a, b] = (await Promise.all(
+      concurrent.map((response) => response.json()),
+    )) as ProjectDto[];
+    expect(a!.id).toBe(b!.id);
+    expect((await open("root/missing")).status).toBe(404);
+    expect((await open("../beta")).status).toBe(403);
+  });
   it("adds workspaces and reads only the selected workspace within the authorized project", async () => {
     const project = await create();
     const response = await fetch(`${base}/projects/${project.id}/workspaces`, {

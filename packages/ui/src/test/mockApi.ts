@@ -405,6 +405,21 @@ export function mockKushexApi(
       projects[index] = { ...project, workspaces: [...project.workspaces, workspace] };
       return respond(projects[index], 201);
     }
+    if (route === "/projects/open" && request.method === "POST") {
+      const body = (await request.json()) as { name: string; path: string };
+      const existing = projects.find((entry) =>
+        entry.workspaces.some((workspace) => workspace.path === body.path),
+      );
+      if (existing) return respond(existing);
+      const project = {
+        ...exampleProject,
+        name: body.name,
+        workspace: { ...exampleProject.workspace, path: body.path },
+        workspaces: [{ ...exampleProject.workspace, path: body.path }],
+      };
+      projects.push(project);
+      return respond(project, 201);
+    }
     if (route === "/projects" && request.method === "POST") {
       const body = (await request.json()) as { name: string; path: string };
       const project = {

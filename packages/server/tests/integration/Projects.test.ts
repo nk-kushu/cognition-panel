@@ -84,6 +84,20 @@ describe("project persistence", () => {
     expect(schemas?.project).toBeTruthy();
     expect(schemas?.workspace).toBeTruthy();
   });
+  it("finds the actor's oldest project with a workspace at a path", async () => {
+    const projects = new PrismaProjectRepository(database.client);
+    const first = await projects.create("local-operator", { name: "First", path: "root/a" });
+    await projects.create("local-operator", { name: "Second", path: "root/a" });
+    const withSecondWorkspace = await projects.addWorkspace("local-operator", first.id, "root/b");
+    expect(await projects.findByWorkspacePath("local-operator", "root/a")).toEqual(
+      withSecondWorkspace,
+    );
+    expect(await projects.findByWorkspacePath("local-operator", "root/b")).toEqual(
+      withSecondWorkspace,
+    );
+    expect(await projects.findByWorkspacePath("other-actor", "root/a")).toBeNull();
+    expect(await projects.findByWorkspacePath("local-operator", "root/c")).toBeNull();
+  });
   it("rolls back the project if nested workspace insertion fails", async () => {
     const projects = new PrismaProjectRepository(database.client);
     await expect(

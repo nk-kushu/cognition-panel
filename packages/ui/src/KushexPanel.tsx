@@ -17,6 +17,7 @@ import { RunTabSync } from "./features/runs/RunTabSync";
 import { getAntdTheme } from "./app/theme";
 import { NavigationBridge, PanelRouter, type NavigateTo } from "./app/PanelRouter";
 import { ThemeBridge } from "./app/ThemeBridge";
+import { HostContext } from "./features/workbench/HostContext";
 import { Workbench } from "./features/workbench/Workbench";
 import {
   colorModeChanged,
@@ -37,10 +38,12 @@ type KushexPanelProps = KushexPanelOptions & Readonly<{ ref?: Ref<KushexPanelHan
  * The Cognition Panel panel. Store and theme are created per mounted instance, so several
  * panels (or tests) on one page never share state.
  */
-export function KushexPanel(props: KushexPanelProps) {
+export function KushexPanel({ context, ...props }: KushexPanelProps) {
   return (
     <KushexProvider {...props}>
-      <Workbench />
+      <HostContext context={context}>
+        <Workbench />
+      </HostContext>
     </KushexProvider>
   );
 }

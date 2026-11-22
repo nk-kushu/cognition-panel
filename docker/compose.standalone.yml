@@ -49,7 +49,7 @@ services:
       HOST: 0.0.0.0
       PORT: "3000"
       DATABASE_URL: *database-url
-      KUSHEX_WORKSPACES_ROOT: /workspaces,/kushi-projects,/kushi-worktrees,/plugins/kushi-control-panel/agents
+      KUSHEX_WORKSPACES_ROOT: /workspaces,/kushi-projects,/kushi-worktrees,/plugins/kushi-control-panel/agents,/templates
       KUSHI_CONTROL_PANEL_URL: ${KUSHI_CONTROL_PANEL_URL:-http://host.docker.internal:3030}
       KUSHI_NETWORK_HOSTNAME: host.docker.internal
       KUSHEX_PLUGINS_DIR: /plugins
@@ -58,7 +58,8 @@ services:
       # Working copies and state of coding runs; a run waiting for a human lives here.
       KUSHEX_RUNS_DIR: /var/lib/kushex/runs
       KUSHEX_EXCLUDED_DIRECTORIES: ${KUSHEX_EXCLUDED_DIRECTORIES-dist,build,coverage,.next,.nuxt,.output,.cache,.turbo,.vite}
-      KUSHEX_ALLOWED_ORIGINS: http://localhost:3050,http://127.0.0.1:3050
+      # 5173: cognition embeds the panel on its template pages and proxies /kushex-api here.
+      KUSHEX_ALLOWED_ORIGINS: http://localhost:3050,http://127.0.0.1:3050,http://localhost:5173,http://127.0.0.1:5173
       # Agents run from the chat read model credentials from the backend's environment.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-}
@@ -88,6 +89,8 @@ services:
       - ../../kushi-control-panel:/plugins/kushi-control-panel
       - ${AGENTIC_AI_HOST_ROOT:-/Users/niki/projects/cms4}:/kushi-projects
       - ${KUSHIGIT_WORKTREES_HOST_ROOT:-${HOME}/repos/.kushigit-worktrees}:/kushi-worktrees
+      # Cognition's templates; workspace paths look like `templates/agentic-service`.
+      - ${COGNITION_TEMPLATES_HOST_ROOT:-../../cognition/scaffolding/templates}:/templates
       # Plugin packages; writable so the agent editor can save source files.
       - type: bind
         source: ../plugins

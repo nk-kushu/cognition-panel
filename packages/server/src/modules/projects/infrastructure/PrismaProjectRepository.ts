@@ -12,6 +12,14 @@ export class PrismaProjectRepository implements ProjectRepository {
     });
     return row ? this.toDto(row) : null;
   }
+  async findByWorkspacePath(actorId: string, path: string): Promise<ProjectDto | null> {
+    const row = await this.client.project.findFirst({
+      where: { actorId, workspaces: { some: { path } } },
+      include: { workspaces: true },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    return row ? this.toDto(row) : null;
+  }
   async create(actorId: string, input: CreateProjectRequest): Promise<ProjectDto> {
     // Nested create is atomic: a workspace cannot be committed without its project.
     const project = await this.client.project.create({

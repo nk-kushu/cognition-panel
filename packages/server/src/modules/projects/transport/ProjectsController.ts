@@ -5,6 +5,14 @@ import type { HttpController } from "../../../transport/http/HttpController.js";
 import type { RequestContextFactory } from "../../../transport/http/RequestContextFactory.js";
 import type { ProjectService } from "../application/ProjectService.js";
 
+const createProjectBody = z
+  .object({
+    name: z.string().trim().min(1).max(200),
+    path: z.string().min(1).max(4096),
+    description: z.string().trim().max(2000).optional(),
+  })
+  .strict();
+
 export class ProjectsController implements HttpController {
   constructor(
     private readonly projects: ProjectService,
@@ -37,18 +45,22 @@ export class ProjectsController implements HttpController {
       },
     );
     routes.post<{ Body: CreateProjectRequest }>(
-      "/projects",
-      {
-        schema: {
-          body: z
-            .object({
-              name: z.string().trim().min(1).max(200),
-              path: z.string().min(1).max(4096),
-              description: z.string().trim().max(2000).optional(),
-            })
-            .strict(),
-        },
+      "/projects/open",
+      { schema: { body: createProjectBody } },
+      async (request, reply) => {
+        const { project, created } = await this.projects.open(
+          this.contexts.create(request),
+          request.body,
+        );
+        return reply
+          .code(created ? 201 : 200)
+          .header("Cache-Control", "no-store")
+          .send(project);
       },
+    );
+    routes.post<{ Body: CreateProjectRequest }>(
+      "/projects",
+      { schema: { body: createProjectBody } },
       async (request, reply) => {
         const project = await this.projects.create(this.contexts.create(request), request.body);
         reply.code(201).header("Cache-Control", "no-store");

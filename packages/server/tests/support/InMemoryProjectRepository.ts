@@ -32,6 +32,14 @@ export class InMemoryProjectRepository implements ProjectRepository, WorkspaceRe
     const record = this.records.get(id);
     return record?.actorId === actorId ? record.project : null;
   }
+  async findByWorkspacePath(actorId: string, path: string): Promise<ProjectDto | null> {
+    const record = [...this.records.values()].find(
+      (item) =>
+        item.actorId === actorId &&
+        item.project.workspaces.some((workspace) => workspace.path === path),
+    );
+    return record?.project ?? null;
+  }
   async list(actorId: string, _offset: number): Promise<Page<ProjectDto>> {
     return {
       entries: [...this.records.values()]

@@ -171,6 +171,11 @@ export const kushexApi = createApi({
       query: (body) => ({ url: "/projects", method: "POST", body }),
       invalidatesTags: ["Projects"],
     }),
+    /** The project already opened at `path`, created on first use. */
+    openProject: build.mutation<ProjectDto, CreateProjectRequest>({
+      query: (body) => ({ url: "/projects/open", method: "POST", body }),
+      invalidatesTags: ["Projects"],
+    }),
     locations: build.query<DirectoryPageDto, number>({
       query: (offset) => ({ url: "/locations", params: { offset } }),
     }),
@@ -433,6 +438,7 @@ export const {
   useProjectQuery,
   useProjectsQuery,
   useCreateProjectMutation,
+  useOpenProjectMutation,
   useAddWorkspaceMutation,
   useLocationsQuery,
   useTreeQuery,
