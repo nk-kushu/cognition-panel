@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { ToolUseError } from "./ResearchTools";
+import { ToolUseError } from "./ToolBox";
 
 export type TemplateSummary = Readonly<{
   key: string;

@@ -3,7 +3,6 @@ import type { ICapability } from "./Capability";
 import { AnswerCapability } from "./AnswerCapability";
 import { ClarifyCapability } from "./ClarifyCapability";
 import { IdeaAnalysisCapability } from "./IdeaAnalysisCapability";
-import { ResearchCapability } from "./ResearchCapability";
 
 /** Every capability the assistant offers, by id and by slash command. */
 export class CapabilityRegistry {
@@ -29,7 +28,7 @@ export class CapabilityRegistry {
 
   static default(): CapabilityRegistry {
     const registry = new CapabilityRegistry(
-      [new ResearchCapability(), new IdeaAnalysisCapability(), new AnswerCapability(), new ClarifyCapability()],
+      [new IdeaAnalysisCapability(), new AnswerCapability(), new ClarifyCapability()],
       "answer",
       "clarify",
     );

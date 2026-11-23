@@ -1,6 +1,6 @@
 import type { JsonValue } from "kushibot";
-import type { IToolSet } from "./ResearchTools";
-import { ToolUseError } from "./ResearchTools";
+import type { IToolSet } from "./ToolBox";
+import { ToolUseError } from "./ToolBox";
 import type { TemplateCatalog } from "./TemplateCatalog";
 
 /** Told to the model in the instructions; the ids must match `call`. */

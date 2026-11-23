@@ -1,4 +1,4 @@
-import { RESEARCH_NOTES_TOOL_DESCRIPTION, ResearchNotesTools, ToolBox } from "../ResearchTools";
+import { ToolBox } from "../ToolBox";
 import { TEMPLATE_TOOL_DESCRIPTIONS, TemplateTools } from "../TemplateTools";
 import type { CapabilityContext, ICapability } from "./Capability";
 
@@ -14,7 +14,6 @@ export class IdeaAnalysisCapability implements ICapability {
   instructions(): string {
     return `You are the idea analyst of the cognition platform. You only read; you change nothing.
 
-0. Call read_research_notes once. If research about this domain exists, use it: its must-have features, risks and open questions shape the plan.
 1. Understand the idea first. Work out the goal, who uses it and the core features, using the conversation for context.
    If the goal or the core features cannot be worked out, do not plan: answer only with the two or three questions that would settle it.
 2. Call list_templates once.
@@ -26,13 +25,12 @@ Write the answer in the user's language. Keep it short, with these sections:
 - A table: template | which part of the idea it covers | what to change or configure.
 - What is missing: the parts no template covers, and what would have to be written.
 - Suggested order of work, as a short numbered list.
-If the domain is clearly unfamiliar to the user and there is no research note, end with one line suggesting /research <topic> first.
 
 Tools (one call per action):
-${[RESEARCH_NOTES_TOOL_DESCRIPTION, ...TEMPLATE_TOOL_DESCRIPTIONS].join("\n")}`;
+${TEMPLATE_TOOL_DESCRIPTIONS.join("\n")}`;
   }
 
   tools(context: CapabilityContext) {
-    return new ToolBox([new ResearchNotesTools(context.api, context.app), new TemplateTools(context.catalog, context.progress)]);
+    return new ToolBox([new TemplateTools(context.catalog, context.progress)]);
   }
 }

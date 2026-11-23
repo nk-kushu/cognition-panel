@@ -2,7 +2,6 @@ import type { IScopedDebugRecorderFactory } from "kushibot";
 import { createAssistantAgent } from "./src/AssistantAgent";
 import type { ConversationTurn } from "./src/AssistantRequest";
 import { CapabilityRegistry } from "./src/capabilities/CapabilityRegistry";
-import { appForWorkspace, CognitionApi, type CognitionApp } from "./src/CognitionApi";
 import { DEFAULT_FAST_MODEL, DEFAULT_MAIN_MODEL, OpenRouterModels } from "./src/OpenRouterModel";
 import { TemplateCatalog } from "./src/TemplateCatalog";
 
@@ -20,13 +19,11 @@ type ChatRequest = Readonly<{
 }>;
 
 /**
- * The cognition assistant: picks a capability for each message (research, idea analysis, answering a
- * question, or asking for clarification) and runs it. A leading /research, /idea, /ask or /clarify picks it directly.
+ * The cognition assistant: picks a capability for each message (idea analysis, answering a
+ * question, or asking for clarification) and runs it. A leading /idea, /ask or /clarify picks it directly.
  */
 export async function chat(request: ChatRequest): Promise<string> {
   const catalog = TemplateCatalog.locate(request.workspace);
-  const api = new CognitionApi(undefined, request.signal);
-  const app = await resolveApp(api, request.workspace, request.progress);
   const models = await OpenRouterModels.load(request.credentials?.openrouter || process.env.OPENROUTER_API_KEY, request.signal);
   const main = process.env.IDEA_PLANNER_MODEL || DEFAULT_MAIN_MODEL;
   const fast = process.env.IDEA_PLANNER_FAST_MODEL || DEFAULT_FAST_MODEL;
@@ -37,7 +34,7 @@ export async function chat(request: ChatRequest): Promise<string> {
       main: models.bind("main", main, "IDEA_PLANNER_MODEL"),
       fast: models.bind("fast", fast, "IDEA_PLANNER_FAST_MODEL"),
     },
-    environment: { catalog, api, app, progress: request.progress },
+    environment: { catalog, progress: request.progress },
     ...(request.debug ? { debug: request.debug } : {}),
   });
   const run = await agent.run(
@@ -46,18 +43,6 @@ export async function chat(request: ChatRequest): Promise<string> {
   );
   if (run.result) return run.result.answer;
   throw new Error(`The assistant stopped without an answer (${JSON.stringify(run.outcome).slice(0, 500)}).`);
-}
-
-/** The app this chat is open in. Without the cognition API the assistant still works, but saves nothing. */
-async function resolveApp(api: CognitionApi, workspace: string, progress: (message: string) => void): Promise<CognitionApp | null> {
-  try {
-    const app = appForWorkspace(await api.apps(), workspace);
-    progress(app ? `App: ${app.name}` : "No app: research will not be saved as a note");
-    return app;
-  } catch (error) {
-    progress(`Cognition API unavailable, research will not be saved: ${(error as Error).message}`);
-    return null;
-  }
 }
 
 /** The thread may already hold the current message as its last turn; the request carries it separately. */

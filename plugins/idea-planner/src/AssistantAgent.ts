@@ -24,7 +24,6 @@ import {
 import type { CapabilityContext, CapabilityModel } from "./capabilities/Capability";
 import type { CapabilityRegistry } from "./capabilities/CapabilityRegistry";
 import { CapabilityRouter } from "./routing/CapabilityRouter";
-import type { CognitionApi, CognitionApp } from "./CognitionApi";
 import type { TemplateCatalog } from "./TemplateCatalog";
 
 export type AssistantModels = Readonly<Record<CapabilityModel, AgentModelBinding>>;
@@ -32,8 +31,6 @@ export type AssistantModels = Readonly<Record<CapabilityModel, AgentModelBinding
 /** What every capability may use, fixed for one chat message. */
 export type AssistantEnvironment = Readonly<{
   catalog: TemplateCatalog;
-  api: CognitionApi;
-  app: CognitionApp | null;
   progress(message: string): void;
 }>;
 
@@ -52,7 +49,7 @@ class AssistantWorkflow implements IPolicy<IAgentSetupInput<AssistantRequest>, I
     const route = await this.router.route(task, runtime, this.models.fast);
     const { capability } = route;
     this.environment.progress(`Capability: ${capability.id} (${route.source})`);
-    const context: CapabilityContext = { ...this.environment, message: route.message, runKey: runtime.ids.nextId() };
+    const context: CapabilityContext = this.environment;
 
     const json = new JsonValueContract();
     const tasks = new TaskInputContract(json);
@@ -124,7 +121,7 @@ class AssistantWorkflow implements IPolicy<IAgentSetupInput<AssistantRequest>, I
         apply: async (result) => {
           const checked = await answers.validate(result.results[0]?.result);
           if (!checked.valid) throw new Error("The assistant returned no answer.");
-          return capability.complete ? capability.complete(checked.value, context) : checked.value;
+          return checked.value;
         },
       },
       resultContract: answers,

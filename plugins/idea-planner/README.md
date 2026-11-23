@@ -1,29 +1,13 @@
 # Cognition Assistant (agent id `idea-planner`)
 
-An assistant for the cognition platform. For each message it first picks a **capability**,
-then runs it. The only thing it writes is research notes. It changes no code, features or tasks.
+A read-only assistant for the cognition platform. For each message it first picks a
+**capability**, then runs it. It changes no files, notes, features or tasks.
 
 | Capability | Command | When |
 |---|---|---|
-| `research` | `/research` | The user does not know the domain. It searches and reads public pages (at most 6 searches and 8 pages), then explains the domain: plain-words overview, glossary, existing products, must-have features, risks and rules, **questions for you**, and sources. Every claim is cited. It saves the result as an app note titled `Research: …`. |
-| `idea-analysis` | `/idea` | The user describes something to build. It reads earlier research notes, understands the idea (goal, users, core features), reads the matching templates, and answers with what each template covers, what is missing, and an order of work. |
-| `answer` | `/ask` | Questions, explanations and follow-ups. Reads research notes and templates when needed. Also the fallback. |
+| `idea-analysis` | `/idea` | The user describes something to build. It understands the idea (goal, users, core features), reads the matching templates, and answers with what each template covers, what is missing, and an order of work. |
+| `answer` | `/ask` | Questions, explanations and follow-ups. Reads templates when needed. Also the fallback. |
 | `clarify` | `/clarify` | The message is too unclear to route. Asks one short question. |
-
-## The cognition API
-
-Web research and notes go through the cognition app's API (`COGNITION_API_URL`, default
-`http://host.docker.internal:3000`):
-
-- `POST /api/harness/research/search` and `POST /api/harness/research/read`: the backend's
-  `WebResearchService`, whose `PublicUrlPolicy` blocks private and local addresses.
-- `GET /api/local-apps`: finds the app whose directory is the chat's workspace. The two paths are
-  matched by their longest common tail, because the panel and cognition mount the same folder
-  under different roots.
-- `GET/POST /api/harness/projects/app/:appId/notes`: reads and saves research notes.
-
-If the API is unreachable, or the chat is not open in an app, the assistant still answers. Research
-is then shown in the chat but not saved.
 
 ## How a message is handled
 

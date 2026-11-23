@@ -12,8 +12,8 @@ export class ClarifyCapability implements ICapability {
 
   instructions(): string {
     return `The user's request is unclear. Do not answer or plan anything yet.
-Ask one short question, in the user's language, that settles what they want. Offer the three things you can do:
-researching an unfamiliar domain (/research ...), analysing an idea against the cognition templates (/idea ...), or answering a question (/ask ...).
+Ask one short question, in the user's language, that settles what they want. Offer the two things you can do:
+analysing an idea against the cognition templates (/idea ...), or answering a question about the templates (/ask ...).
 Return it right away as the final answer; do not call tools.`;
   }
 

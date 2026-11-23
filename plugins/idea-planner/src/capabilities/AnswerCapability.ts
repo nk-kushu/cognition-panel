@@ -1,4 +1,4 @@
-import { RESEARCH_NOTES_TOOL_DESCRIPTION, ResearchNotesTools, ToolBox } from "../ResearchTools";
+import { ToolBox } from "../ToolBox";
 import { TEMPLATE_TOOL_DESCRIPTIONS, TemplateTools } from "../TemplateTools";
 import type { CapabilityContext, ICapability } from "./Capability";
 
@@ -16,15 +16,14 @@ export class AnswerCapability implements ICapability {
 
 - Use the conversation for context. A follow-up such as "and the auth part?" refers to the earlier answer.
 - When the answer depends on the templates, read them with the tools. Never invent template contents.
-- If the user asks what you can do: you research an unfamiliar domain from the web and save it as a note (/research), analyse ideas against the scaffolding templates (/idea), and answer questions about the templates and earlier research (/ask).
-- For questions about the app's domain, check read_research_notes first. If nothing covers it, suggest /research instead of answering from memory.
+- If the user asks what you can do: you analyse ideas against the scaffolding templates (/idea), and answer questions about the templates (/ask).
 - Write in the user's language. Lead with the direct answer, then only the details needed. Short and structured.
 
 Tools (one call per action; skip them when the question does not need them):
-${[RESEARCH_NOTES_TOOL_DESCRIPTION, ...TEMPLATE_TOOL_DESCRIPTIONS].join("\n")}`;
+${TEMPLATE_TOOL_DESCRIPTIONS.join("\n")}`;
   }
 
   tools(context: CapabilityContext) {
-    return new ToolBox([new ResearchNotesTools(context.api, context.app), new TemplateTools(context.catalog, context.progress)]);
+    return new ToolBox([new TemplateTools(context.catalog, context.progress)]);
   }
 }
