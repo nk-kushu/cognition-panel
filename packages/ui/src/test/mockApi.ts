@@ -148,12 +148,13 @@ export function mockKushexApi(
     if (route === "/agents")
       return respond({
         entries: [...agents.values()].map(
-          ({ name, updatedAt, displayName, description, plugin }) => ({
+          ({ name, updatedAt, displayName, description, plugin, commands }) => ({
             name,
             updatedAt,
             displayName,
             description,
             plugin,
+            ...(commands ? { commands } : {}),
           }),
         ),
         nextOffset: null,

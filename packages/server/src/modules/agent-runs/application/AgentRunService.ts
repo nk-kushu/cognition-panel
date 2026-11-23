@@ -16,6 +16,9 @@ export interface DebugEventRecorder {
 
 type Limits = Readonly<{ maxActiveRuns: number; maxKeptRuns: number }>;
 
+/** Agents trusted with the actor's saved provider keys (OpenRouter); other agents never receive them. */
+const AGENTS_WITH_PROVIDER_CREDENTIALS: ReadonlySet<string> = new Set(["coding", "idea-planner"]);
+
 /** Loads what an agent needs from the database, scoped to a project the actor can access. */
 export interface AgentHostContext {
   load(
@@ -85,7 +88,9 @@ export class AgentRunService implements ManagedResource {
       request.threadId,
     );
     const credentials =
-      request.agentName === "coding" ? await this.credentials?.credentials(context) : undefined;
+      AGENTS_WITH_PROVIDER_CREDENTIALS.has(request.agentName)
+        ? await this.credentials?.credentials(context)
+        : undefined;
     const run = new AgentRun(
       context.actor.id,
       projectId,

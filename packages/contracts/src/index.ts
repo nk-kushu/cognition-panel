@@ -44,12 +44,25 @@ export type UserSettingsDto = Readonly<{
 export type UpdateUserSettingsRequest = Partial<UserSettingsDto>;
 
 /** An agent is a folder `agents/<name>/` whose primary file `agent.ts` exports a kushibot-based agent. */
+/**
+ * A slash command an agent understands at the start of a message, e.g. `/research`. Declared in
+ * the manifest so the chat can offer it without running plugin code; the agent decides what it does.
+ */
+export type AgentCommand = Readonly<{
+  /** Starts with `/`, then lowercase letters, digits and `-`; at most 32 characters. */
+  name: string;
+  /** One line for people, shown in the chat's command menu. */
+  description: string;
+  /** What to type after the command, shown as a hint, e.g. `<topic>`. */
+  argument?: string;
+}>;
 export type PluginAgentContribution = Readonly<{
   id: string;
   name: string;
   description?: string;
   directory: string;
   entry: string;
+  commands?: readonly AgentCommand[];
 }>;
 export type PluginManifest = Readonly<{
   id: string;
@@ -62,6 +75,8 @@ export type AgentPluginMetadata = Readonly<{
   displayName?: string;
   description?: string;
   plugin?: Readonly<{ id: string; name: string }>;
+  /** Slash commands from the plugin manifest; absent when the agent declares none. */
+  commands?: readonly AgentCommand[];
 }>;
 export type PluginDto = Readonly<{
   id: string;

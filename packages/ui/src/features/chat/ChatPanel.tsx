@@ -3,6 +3,7 @@ import { IconChevronRight } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useContext } from "react";
 import { ChatHostContext, PanelLink } from "./ChatHostContext";
+import { SLASH_MENU_ID, SlashCommandMenu, useSlashCommands } from "./SlashCommandMenu";
 import type { AgentConfiguration, AgentRunStatus } from "@kushex/contracts";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { errorMessage } from "../../shared/api/errorMessage";
@@ -106,6 +107,7 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
   const agentName = host.agentName || chat.agentName;
   const selectedAgent = agents.data?.entries.find((agent) => agent.name === agentName);
   const known = !!agentName && !!agents.data?.entries.some((agent) => agent.name === agentName);
+  const slash = useSlashCommands(text, selectedAgent?.commands, setText);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView?.({ block: "end" });
@@ -394,15 +396,30 @@ function ProjectChat({ projectId }: Readonly<{ projectId: string }>) {
               ))}
             </div>
           )}
+          {slash.open && (
+            <SlashCommandMenu
+              matches={slash.matches}
+              active={slash.active}
+              onHover={slash.setActive}
+              onSelect={slash.select}
+            />
+          )}
           <Input.TextArea
             aria-label="Message"
+            aria-controls={slash.open ? SLASH_MENU_ID : undefined}
+            aria-activedescendant={slash.open ? `${SLASH_MENU_ID}-${slash.active}` : undefined}
             variant="borderless"
-            placeholder={agentName ? `Message ${agentName}…` : "Choose an agent first"}
+            placeholder={
+              agentName
+                ? `Message ${agentName}…${selectedAgent?.commands?.length ? " Type / for commands" : ""}`
+                : "Choose an agent first"
+            }
             autoSize={{ minRows: 1, maxRows: 8 }}
             maxLength={8000}
             value={text}
             onChange={(event) => setText(event.target.value)}
             onKeyDown={(event) => {
+              if (slash.onKeyDown(event)) return;
               // Enter sends, Shift+Enter adds a line; Ctrl/⌘+Shift+Enter sends with debugging.
               if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
               const modifier = event.metaKey || event.ctrlKey;

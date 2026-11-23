@@ -41,6 +41,21 @@ export class PluginCatalog implements AgentStore {
             description: z.string().optional(),
             directory: z.string().min(1),
             entry: z.string().refine((value) => AgentFilePath.isValid(value)),
+            commands: z
+              .array(
+                z
+                  .object({
+                    name: z.string().regex(/^\/[a-z][a-z0-9-]{0,30}$/),
+                    description: z.string().trim().min(1).max(200),
+                    argument: z.string().trim().min(1).max(40).optional(),
+                  })
+                  .strict(),
+              )
+              .max(30)
+              .refine((commands) => new Set(commands.map((command) => command.name)).size === commands.length, {
+                message: "Command names must be unique.",
+              })
+              .optional(),
           })
           .strict(),
       ),
@@ -224,6 +239,7 @@ export class PluginCatalog implements AgentStore {
         ? { description: registration.agent.description }
         : {}),
       plugin: { id: registration.plugin.id, name: registration.plugin.name },
+      ...(registration.agent.commands?.length ? { commands: registration.agent.commands } : {}),
     };
   }
   private fail(plugin: Discovered, message: string): void {

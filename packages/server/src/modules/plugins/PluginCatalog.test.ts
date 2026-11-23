@@ -209,3 +209,45 @@ it("does not create a missing plugins directory", async () => {
     code: "ENOENT",
   });
 });
+
+it("publishes an agent's slash commands from its manifest and rejects malformed ones", async () => {
+  const folder = path.join(plugins, "assistant");
+  await mkdir(folder, { recursive: true });
+  await writeFile(path.join(folder, "agent.ts"), "export const chat = () => 'hi';");
+  const agent = { id: "assistant", name: "Assistant", directory: ".", entry: "agent.ts" };
+  await save(folder, {
+    id: "assistant",
+    name: "Assistant",
+    version: "1.0.0",
+    apiVersion: 1,
+    agents: [
+      {
+        ...agent,
+        commands: [
+          { name: "/research", description: "Research a domain", argument: "<topic>" },
+          { name: "/ask", description: "Ask a question" },
+        ],
+      },
+    ],
+  });
+  await catalog.start();
+  const listed = (await catalog.list()).find((entry) => entry.name === "assistant");
+  expect(listed?.commands).toEqual([
+    { name: "/research", description: "Research a domain", argument: "<topic>" },
+    { name: "/ask", description: "Ask a question" },
+  ]);
+  expect((await catalog.find(name("assistant"))).commands).toHaveLength(2);
+  expect((await catalog.list()).find((entry) => entry.name === "coding")).not.toHaveProperty("commands");
+
+  for (const commands of [
+    [{ name: "research", description: "missing slash" }],
+    [{ name: "/Research", description: "uppercase" }],
+    [{ name: "/a", description: "x" }, { name: "/a", description: "duplicate" }],
+    [{ name: "/a", description: "" }],
+  ]) {
+    await save(folder, { id: "assistant", name: "Assistant", version: "1.0.0", apiVersion: 1, agents: [{ ...agent, commands }] });
+    const strict = new PluginCatalog(plugins);
+    await strict.start();
+    expect(strict.plugins().find((plugin) => plugin.id === "assistant")?.errors.length).toBeGreaterThan(0);
+  }
+});
