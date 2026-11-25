@@ -249,3 +249,15 @@ model OpenRouterCredential {
 
   @@schema("kushex")
 }
+
+// Keys for the research agents' market sources (Tavily, DataForSEO, Reddit, ...): one value per
+// local operator and setting name. Never returned to the UI.
+model MarketingCredential {
+  actorId        String
+  name           String
+  encryptedValue String
+  updatedAt      DateTime @updatedAt
+
+  @@id([actorId, name])
+  @@schema("kushex")
+}

@@ -7,7 +7,7 @@
     {
       "id": "cognition",
       "name": "Cognition",
-      "description": "Routes each message to the right agent: idea and template questions to the Cognition Assistant (idea-planner), research analysis and blind spots to the Research Agent. Slash commands of both work here.",
+      "description": "Routes each message to the right agent: idea and template questions to the Cognition Assistant (idea-planner), research analysis, evidence discovery and blind spots to the Research Agent. Slash commands of both work here.",
       "directory": ".",
       "entry": "agent.ts",
       "commands": [
@@ -29,6 +29,11 @@
           "name": "/analyze",
           "argument": "<документ>",
           "description": "Извади факти с цитати от документ в Knowledge"
+        },
+        {
+          "name": "/discover",
+          "argument": "<тема>",
+          "description": "Намери нови доказателства: пазар, конкуренти, реклами, общности, отзиви"
         },
         {
           "name": "/gaps",

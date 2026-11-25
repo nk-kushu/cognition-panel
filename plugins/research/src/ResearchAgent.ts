@@ -45,7 +45,7 @@ class ResearchWorkflow implements IPolicy<IAgentSetupInput<ResearchRequest>, IAg
     const route = await this.router.route(task, runtime, this.models.fast);
     const { capability } = route;
     this.environment.progress(`Capability: ${capability.id} (${route.source})`);
-    const context: CapabilityContext = { research: this.environment.research };
+    const context: CapabilityContext = { research: this.environment.research, marketing: this.environment.marketing };
 
     const json = new JsonValueContract();
     const tasks = new TaskInputContract(json);

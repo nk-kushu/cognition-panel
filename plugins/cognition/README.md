@@ -6,7 +6,7 @@ The agent behind cognition's general chat. It answers nothing itself: for each m
 | Agent | Commands |
 |---|---|
 | `idea-planner` (Cognition Assistant, fallback) | `/idea`, `/ask`, `/clarify` |
-| `research` (Research Agent) | `/analyze`, `/gaps` |
+| `research` (Research Agent) | `/analyze`, `/discover`, `/gaps` |
 
 ## How it chooses
 

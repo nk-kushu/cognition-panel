@@ -212,5 +212,5 @@ test("the registry matches the manifest and picks capabilities by command", () =
 
 test("a manifest that differs from the registry names what to add or remove", () => {
   const registry = CapabilityRegistry.default();
-  assert.throws(() => registry.assertMatchesManifest(["/analyze", "/old"]), /Add: \/gaps\. Remove: \/old\./);
+  assert.throws(() => registry.assertMatchesManifest(["/analyze", "/old"]), /Add: \/discover, \/gaps\. Remove: \/old\./);
 });
