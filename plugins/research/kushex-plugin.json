@@ -1,0 +1,26 @@
+{
+  "id": "research",
+  "name": "Research Agent",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "agents": [
+    {
+      "id": "research",
+      "name": "Research Agent",
+      "description": "Fills cognition's Research stages: extracts cited facts from Knowledge documents (/analyze) and explains the blind spots (/gaps). Writes only proposed findings through the cognition API.",
+      "directory": ".",
+      "entry": "agent.ts",
+      "commands": [
+        {
+          "name": "/analyze",
+          "argument": "<документ>",
+          "description": "Извади факти с цитати от документ в Knowledge"
+        },
+        {
+          "name": "/gaps",
+          "description": "Кои са белите петна и какво да проуча следващо"
+        }
+      ]
+    }
+  ]
+}

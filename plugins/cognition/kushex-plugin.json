@@ -1,0 +1,40 @@
+{
+  "id": "cognition",
+  "name": "Cognition",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "agents": [
+    {
+      "id": "cognition",
+      "name": "Cognition",
+      "description": "Routes each message to the right agent: idea and template questions to the Cognition Assistant (idea-planner), research analysis and blind spots to the Research Agent. Slash commands of both work here.",
+      "directory": ".",
+      "entry": "agent.ts",
+      "commands": [
+        {
+          "name": "/idea",
+          "argument": "<idea>",
+          "description": "Анализирай идея: кои шаблони покриват какво и какво липсва"
+        },
+        {
+          "name": "/ask",
+          "argument": "<question>",
+          "description": "Въпрос за шаблоните, проучванията или предишен отговор"
+        },
+        {
+          "name": "/clarify",
+          "description": "Помогни ми да формулирам какво искам"
+        },
+        {
+          "name": "/analyze",
+          "argument": "<документ>",
+          "description": "Извади факти с цитати от документ в Knowledge"
+        },
+        {
+          "name": "/gaps",
+          "description": "Кои са белите петна и какво да проуча следващо"
+        }
+      ]
+    }
+  ]
+}

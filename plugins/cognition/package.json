@@ -1,0 +1,16 @@
+{
+  "name": "@kushex/cognition-router-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cognition Panel agent that routes each chat message to idea-planner or research.",
+  "files": [
+    "kushex-plugin.json",
+    "**/*.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "../../packages/server/node_modules/.bin/tsx --test tests/*.test.ts"
+  }
+}
