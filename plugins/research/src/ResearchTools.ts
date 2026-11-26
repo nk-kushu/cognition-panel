@@ -28,7 +28,7 @@ export const RESEARCH_TOOL_DESCRIPTIONS = {
     'propose_finding {"documentId":"…","section":"<section key>","statement":"…","quote":"<exact excerpt, 12-400 chars>","fact"?:{…},"headingPath"?:"…"} — files one fact for review. The quote must be copied exactly from the document.',
   link_findings: 'link_findings {"fromId":"<new finding id>","toId":"<known finding id>","kind":"supports"|"conflicts"} — relates two findings.',
   set_evidence_type:
-    'set_evidence_type {"documentId":"…","evidenceType":"real_user_quote"|"competitor_data"|"ai_brainstorm"} — classifies a document whose evidenceType is still unknown.',
+    'set_evidence_type {"documentId":"…","evidenceType":"real_user_quote"|"official_source"|"competitor_data"|"ai_brainstorm"} — classifies a document whose evidenceType is still unknown.',
   read_idea: "read_idea {} — the app's idea: summary, problem, audience, monetization, constraints, assumptions, and whether it is clear.",
   business_plan_overview:
     "business_plan_overview {} — the current business plan version (blocks with statements and support, financial inputs, break-even per scenario) or null, and the nine block definitions with the research sections that feed them.",

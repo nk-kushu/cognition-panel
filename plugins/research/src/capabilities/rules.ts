@@ -14,7 +14,10 @@ ${sectionGuide()}
   When the document confirms or contradicts a known finding, propose the new fact and then link_findings it to the known id (supports / conflicts).
 - Write statements in the language of the document.
 - If the document's evidenceType is unknown, set it: real_user_quote for people's own words (forums, reviews, interviews),
-  competitor_data for pricing pages, docs and articles about products, ai_brainstorm for text an AI wrote.`;
+  official_source only for the text of a law, a regulator or a government page, competitor_data for pricing pages, docs and
+  articles about products, ai_brainstorm for text an AI wrote.
+- File a fact under a legal.* section only when the document itself states the rule, duty, fee or exception. Never add legal advice
+  or your own reading of the law.`;
 }
 
 export const FINAL_ANSWER = `Finish with {"answer": "<markdown>"} in English: what you read, how many findings you proposed and linked,

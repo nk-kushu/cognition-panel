@@ -15,11 +15,16 @@ export const SECTIONS = [
   { key: "architecture.integration", category: "technical", hint: "An external system the product must connect to.", fact: '{ "name": string, "costKnown": boolean, "clarified": boolean, "monthlyCost"?: number, "currency"?: string }' },
   { key: "architecture.cost", category: "technical", hint: "Running or building costs: hosting, APIs, licences.", fact: "{}" },
   { key: "architecture.risk", category: "risks", hint: "Something that could make building or running it hard.", fact: "{}" },
+  { key: "legal.data_protection", category: "risks", hint: "A rule on personal data that applies to the product (e.g. GDPR consent, storage location, retention), or a rule that does not apply, quoted from the law or the regulator.", fact: "{}" },
+  { key: "legal.sector_rules", category: "risks", hint: "A rule specific to the sector or the audience: payments, health, finance, minors, advertising. Also a statement that no special rule applies, if the source says so.", fact: "{}" },
+  { key: "legal.terms_ip", category: "risks", hint: "Terms of use, licences of used software or content, ownership of user content, trademarks.", fact: "{}" },
+  { key: "legal.tax_entity", category: "risks", hint: "Company form, registration, VAT or sales tax on the service, invoicing duties.", fact: "{}" },
+  { key: "legal.licences_cost", category: "risks", hint: "A licence, registration, insurance or audit the product needs, with its price or duration when known.", fact: "{}" },
 ] as const;
 
 export type SectionKey = (typeof SECTIONS)[number]["key"];
 
-export const EVIDENCE_TYPES = ["real_user_quote", "competitor_data", "ai_brainstorm"] as const;
+export const EVIDENCE_TYPES = ["real_user_quote", "official_source", "competitor_data", "ai_brainstorm"] as const;
 
 export function sectionOf(key: unknown): (typeof SECTIONS)[number] | undefined {
   return SECTIONS.find((section) => section.key === key);
