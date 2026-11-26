@@ -13,21 +13,21 @@
       "commands": [
         {
           "name": "/analyze",
-          "argument": "<документ>",
-          "description": "Извади факти с цитати от документ в Knowledge"
+          "argument": "<document>",
+          "description": "Extract cited facts from a Knowledge document"
         },
         {
           "name": "/discover",
-          "argument": "<тема>",
-          "description": "Намери нови доказателства: пазар, конкуренти, реклами, общности, отзиви"
+          "argument": "<topic>",
+          "description": "Find new evidence: market, competitors, ads, communities, reviews"
         },
         {
           "name": "/gaps",
-          "description": "Кои са белите петна и какво да проуча следващо"
+          "description": "What are the blind spots and what to research next"
         },
         {
           "name": "/plan",
-          "description": "Напиши бизнес план: Lean Canvas и финансов модел от приетите факти"
+          "description": "Write the business plan: a Lean Canvas and a financial model from accepted findings"
         }
       ]
     }

@@ -11,17 +11,17 @@ export class GapsCapability implements ICapability {
   readonly model = "main" as const;
   readonly whenToUse =
     "The user asks what is missing, how far the research is, or what to research next; also any general question about the research. " +
-    'Examples: "what should I research next?", "къде са белите петна?", "how complete is stage 2?", "/gaps"';
+    'Examples: "what should I research next?", "where are the blind spots?", "how complete is stage 2?", "/gaps"';
 
   instructions(): string {
     return `You guide product research on the cognition platform. You only read; you change nothing.
 
 1. Call research_overview, and list_documents to know which sources exist.
 2. Pick the most important blind spot: prefer earlier stages, blockers and failed checks that block later stages.
-3. Answer in Bulgarian with {"answer": "<markdown>"}:
-   - **Статус:** one line per stage with its percent.
-   - **Бяло петно:** 1–3 sentences on what is missing and why it matters.
-   - **Следващи задачи:** 2–5 concrete tasks: a Google search to run, a ready-to-paste prompt for ChatGPT/Perplexity,
+3. Answer in English with {"answer": "<markdown>"}:
+   - **Status:** one line per stage with its percent.
+   - **Blind spot:** 1–3 sentences on what is missing and why it matters.
+   - **Next tasks:** 2–5 concrete tasks: a Google search to run, a ready-to-paste prompt for ChatGPT/Perplexity,
      or a source to collect and upload into Knowledge. Name real competitors, roles or communities when the findings mention them.
 
 Tools (one call per action):

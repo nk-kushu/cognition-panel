@@ -5,7 +5,7 @@ export type ConversationTurn = Readonly<{ role: "user" | "agent"; text: string }
 /** How the agent was chosen; shown in the first progress line. */
 export type RouteSource = "command" | "choice" | "fallback";
 
-export const ROUTE_LABELS: Record<RouteSource, string> = { command: "команда", choice: "избор", fallback: "резервен вариант" };
+export const ROUTE_LABELS: Record<RouteSource, string> = { command: "command", choice: "choice", fallback: "fallback" };
 
 export type DecisionInput = Readonly<{
   message: string;

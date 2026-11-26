@@ -100,7 +100,7 @@ test("a slash command goes to its agent without asking the model", async () => {
   const answer = await routeAndDelegate({ ...request, message: "/gaps какво липсва" }, deps);
   assert.equal(answer, "answer from /plugins/research/agent.ts");
   assert.equal(decider.inputs.length, 0);
-  assert.equal(progress[0], "→ Agent research (команда)");
+  assert.equal(progress[0], "→ Agent research (command)");
   assert.equal(calls[0]!.request.message, "/gaps какво липсва");
 });
 
@@ -114,7 +114,7 @@ test("free text goes to the agent the model chooses, with the previous agent as 
   const { deps, decider, calls, request, progress } = setup({ decide: "research", previous: "idea-planner" });
   await routeAndDelegate({ ...request, message: "какво ми липсва в проучването?" }, deps);
   assert.equal(calls[0]!.entry, RESEARCH.entry);
-  assert.equal(progress[0], "→ Agent research (избор)");
+  assert.equal(progress[0], "→ Agent research (choice)");
   assert.equal(decider.inputs[0]!.previousAgentId, "idea-planner");
   assert.deepEqual(decider.inputs[0]!.conversation, [{ role: "user", text: "earlier" }, { role: "agent", text: "reply" }]);
 });
@@ -123,7 +123,7 @@ test("when the model cannot decide, the thread's previous agent answers", async 
   const { deps, calls, request, progress } = setup({ decide: null, previous: "research" });
   await routeAndDelegate({ ...request, message: "а за етап 2?" }, deps);
   assert.equal(calls[0]!.entry, RESEARCH.entry);
-  assert.equal(progress[0], "→ Agent research (резервен вариант)");
+  assert.equal(progress[0], "→ Agent research (fallback)");
 });
 
 test("without a previous agent, an undecided message goes to idea-planner", async () => {

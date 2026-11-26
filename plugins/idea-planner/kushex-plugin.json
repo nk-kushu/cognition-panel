@@ -14,16 +14,16 @@
         {
           "name": "/idea",
           "argument": "<idea>",
-          "description": "Анализирай идея: кои шаблони покриват какво и какво липсва"
+          "description": "Analyze an idea: which templates cover what, and what is missing"
         },
         {
           "name": "/ask",
           "argument": "<question>",
-          "description": "Въпрос за шаблоните, проучванията или предишен отговор"
+          "description": "A question about the templates, the research or a previous answer"
         },
         {
           "name": "/clarify",
-          "description": "Помогни ми да формулирам какво искам"
+          "description": "Help me put into words what I want"
         }
       ]
     }

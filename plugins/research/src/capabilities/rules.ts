@@ -17,5 +17,5 @@ ${sectionGuide()}
   competitor_data for pricing pages, docs and articles about products, ai_brainstorm for text an AI wrote.`;
 }
 
-export const FINAL_ANSWER = `Finish with {"answer": "<markdown>"} in Bulgarian: what you read, how many findings you proposed and linked,
+export const FINAL_ANSWER = `Finish with {"answer": "<markdown>"} in English: what you read, how many findings you proposed and linked,
 what you skipped and why, and the stage percents from a last research_overview call. Remind the user that the findings wait for review in Research.`;

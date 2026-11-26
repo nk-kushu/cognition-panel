@@ -18,7 +18,7 @@ export class DiscoverCapability implements ICapability {
   readonly model = "main" as const;
   readonly whenToUse =
     "The user wants new evidence gathered from outside: market size or demand, competitors and their prices, ads, what people say on Reddit or Hacker News, app or G2 reviews. " +
-    'Examples: "/discover pricing of Calendly competitors", "find what freelancers complain about", "проучи пазара за CRM за салони", "колко хора търсят това?"';
+    'Examples: "/discover pricing of Calendly competitors", "find what freelancers complain about", "research the market for salon CRM", "how many people search for this?"';
 
   instructions(): string {
     return `You are the market researcher of the cognition platform. You collect real evidence for a product idea from outside sources and file it into fixed research sections. Findings you file wait for a person's review.
@@ -45,11 +45,11 @@ Rules for sources:
 
 ${extractionRules()}
 
-Finish with {"answer": "<markdown>"} in Bulgarian:
-- **Търсих:** the tools and queries you used, and the sources that were not set up.
-- **Запазих:** the documents you saved (title, evidence type).
-- **Предложих:** how many findings you proposed and linked, per section, with the strongest one in a sentence.
-- **Остава:** the stage percents from a last research_overview call and what to look for next.
+Finish with {"answer": "<markdown>"} in English:
+- **Searched:** the tools and queries you used, and the sources that were not set up.
+- **Saved:** the documents you saved (title, evidence type).
+- **Proposed:** how many findings you proposed and linked, per section, with the strongest one in a sentence.
+- **Remaining:** the stage percents from a last research_overview call and what to look for next.
 Remind the user that the findings wait for review in Research.
 
 Research tools (one call per action):

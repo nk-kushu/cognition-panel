@@ -12,7 +12,7 @@ export class AnalyzeCapability implements ICapability {
   readonly model = "main" as const;
   readonly whenToUse =
     "The user wants facts extracted from a document already in Knowledge. " +
-    'Examples: "analyze the Reddit thread", "/analyze c416ed71-…", "извади фактите от отзивите в G2", "what does the pricing page tell us?"';
+    'Examples: "analyze the Reddit thread", "/analyze c416ed71-…", "extract the facts from the G2 reviews", "what does the pricing page tell us?"';
 
   instructions(): string {
     return `You are the research analyst of the cognition platform. You file evidence for a product idea into fixed research sections.

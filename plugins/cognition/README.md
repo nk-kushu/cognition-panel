@@ -17,7 +17,7 @@ The agent behind cognition's general chat. It answers nothing itself: for each m
 3. No decision (abstained, invalid output, no key, rejected key) → the thread's previous agent, else
    `idea-planner`. The router never fails because of its own model; the chosen agent reports a key problem.
 
-The first progress line says who answers: `→ Research Agent (команда | избор | резервен вариант)`.
+The first progress line says who answers: `→ Research Agent (command | choice | fallback)`.
 
 The previous agent per thread is kept in `<tmpdir>/kushex-cognition-router/<threadId>.json`, because
 the panel records only the router's name per turn. Losing it only drops that hint.

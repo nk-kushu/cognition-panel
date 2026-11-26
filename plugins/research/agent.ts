@@ -68,7 +68,7 @@ export async function chat(request: ChatRequest): Promise<string> {
   );
   if (run.result) return run.result.answer;
   const saved = marketing.saved.length ? ` It saved ${marketing.saved.length} source document(s) to Knowledge.` : "";
-  const planSaved = tally.planVersion ? ` It saved business plan v${tally.planVersion}; see Work → Бизнес план.` : "";
+  const planSaved = tally.planVersion ? ` It saved business plan v${tally.planVersion}; see Work → Plan.` : "";
   const done = (tally.proposed.length ? ` Before stopping it proposed ${tally.proposed.length} findings; review them in Research.` : "") + saved + planSaved;
   throw new Error(`The research agent stopped without an answer (${JSON.stringify(run.outcome).slice(0, 500)}).${done}`);
 }
