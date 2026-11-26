@@ -4,6 +4,7 @@ import type { IToolSet } from "../ToolBox";
 import { ToolUseError } from "../ToolBox";
 import { ProviderError } from "./Http";
 import { refusedUrl, slug, truncate } from "./Text";
+import { isOfficialUrl } from "./officialSources";
 import { evidenceKindOf, type Category, type ISourceProvider, type ProviderRequest, type SourceItem } from "./types";
 
 /** Told to the model in the instructions; the ids must match `call`. */
@@ -20,7 +21,7 @@ export const MARKETING_TOOL_DESCRIPTIONS = {
     'search_reviews {"source":"google-play"|"app-store"|"g2","target":"<app id, or the G2 reviews page URL>","maxRating"?:3,"country"?:"US","language"?:"en"} — user reviews of a competitor product. maxRating keeps the complaints.',
   fetch_page: 'fetch_page {"url":"https://…"} — the readable text of one public page, e.g. a competitor pricing page.',
   save_source:
-    'save_source {"resultIds":["r1","r2"],"title":"…"} — stores those results, word for word, as one Knowledge document and returns its documentId. Findings can only quote saved documents.',
+    'save_source {"resultIds":["r1","r2"],"title":"…"} — stores those results, word for word, as one Knowledge document and returns its documentId. Findings can only quote saved documents. Add "official":true for the text of a law, a regulator or a government page: accepted only when every result is from an official domain.',
 } as const;
 
 export type MarketingToolId = keyof typeof MARKETING_TOOL_DESCRIPTIONS;
@@ -159,10 +160,16 @@ export class MarketingTools implements IToolSet {
       if (!item) throw new ToolUseError(`Unknown result id ${id}. Use ids returned by a search tool in this run.`);
       return item;
     });
+    const official = args.official === true;
+    if (official) {
+      const outside = chosen.filter((item) => !isOfficialUrl(item.url));
+      if (outside.length)
+        throw new ToolUseError(`Not an official source: ${outside.map((item) => item.url ?? item.title).join(", ")}. Only an https page of an EU, government or regulator domain can be saved as official. Save it without "official" to keep it as a hypothesis.`);
+    }
     const kinds = new Set(chosen.map((item) => evidenceKindOf(item.category)));
-    if (kinds.size > 1)
+    if (!official && kinds.size > 1)
       throw new ToolUseError("Results of different weight cannot share a document: save people's own words (community, reviews) apart from competitor data (web, ads, keywords, pages).");
-    const evidenceType = [...kinds][0]!;
+    const evidenceType = official ? "official_source" : [...kinds][0]!;
     this.spend("saves");
 
     const providers = [...new Set(chosen.map((item) => item.provider))];

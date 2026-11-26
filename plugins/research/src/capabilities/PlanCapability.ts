@@ -5,7 +5,7 @@ import type { CapabilityContext, ICapability } from "./Capability";
 const TOOLS = ["research_overview", "read_idea", "business_plan_overview", "save_business_plan"] as const;
 
 const BLOCK_KEYS = "problem, customer_segments, unique_value, solution, channels, revenue, costs, key_metrics, unfair_advantage";
-const INPUT_KEYS = "price, startingCustomers, monthlyNewCustomers, monthlyChurn, variableCostPerCustomer, fixedMonthlyCosts, upfrontCost";
+const INPUT_KEYS = "price, startingCustomers, monthlyNewCustomers, monthlyChurn, variableCostPerCustomer, fixedMonthlyCosts, complianceCostPerMonth, upfrontCost";
 
 /**
  * Writes the app's business plan as a Lean Canvas from accepted findings only, plus the inputs of the
@@ -34,6 +34,7 @@ Plan:
    - value is a number ≥ 0; monthlyChurn is a share between 0 and 1 (0.05 = 5%).
    - Take a number from a finding's fact when one exists (a competitor price for price, an integration's monthlyCost for fixedMonthlyCosts) and put that finding's id in source.
    - Every other number is an assumption: "source":null and a note that says why that value (e.g. "15% below Treatwell's price", "typical SMB SaaS churn, to be verified").
+   - complianceCostPerMonth is the monthly cost of licences, insurance and audits. Take it from a legal.licences_cost finding's fact when one exists; otherwise 0 with the note "not estimated: run /legal".
    - Convert yearly prices to monthly. Use one currency.
 4. Call save_business_plan with the whole canvas and the financials. If it answers with an error about findings, remove those citations and save again.
 5. Never compute revenue, profit or break-even yourself: read them from the answer of save_business_plan.
@@ -42,6 +43,7 @@ Finish with {"answer": "<markdown>"} in English:
 - **Readiness:** how many blocks are confirmed, hypotheses, missing.
 - **Strongest:** the best-backed statement.
 - **Weakest:** the blocks that are missing or only hypotheses, with their gap.
+- **Legal:** how many of the five legal sections are confirmed (legalReadiness in the answer of save_business_plan). The legal part of the plan is derived from Research's legal stage; you do not write it. Suggest /legal when sections are missing. This is not legal advice.
 - **Finances:** break-even month per scenario as cognition computed it, and which inputs are assumptions to check first.
 Remind the user that the plan is in Work → Plan, where the inputs can be changed.
 

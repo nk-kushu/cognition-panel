@@ -96,3 +96,17 @@ test("the registry offers /plan, which never computes numbers itself", () => {
   assert.equal(plan.id, "plan");
   assert.match(plan.instructions(), /Never compute revenue, profit or break-even yourself/);
 });
+
+test("the plan instructions know the compliance cost and leave the legal part to Research", () => {
+  const instructions = CapabilityRegistry.default().command("/plan")!.instructions();
+  assert.match(instructions, /complianceCostPerMonth/);
+  assert.match(instructions, /you do not write it/);
+});
+
+test("the registry offers /legal, which never interprets the law and asks for a country first", () => {
+  const legal = CapabilityRegistry.default().command("/legal")!;
+  assert.equal(legal.id, "legal");
+  assert.match(legal.instructions(), /never give legal advice/);
+  assert.match(legal.instructions(), /If "country" is empty, finish at once/);
+  assert.match(legal.instructions(), /"official":true/);
+});

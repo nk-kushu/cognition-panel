@@ -29,7 +29,7 @@ export const RESEARCH_TOOL_DESCRIPTIONS = {
   link_findings: 'link_findings {"fromId":"<new finding id>","toId":"<known finding id>","kind":"supports"|"conflicts"} — relates two findings.',
   set_evidence_type:
     'set_evidence_type {"documentId":"…","evidenceType":"real_user_quote"|"official_source"|"competitor_data"|"ai_brainstorm"} — classifies a document whose evidenceType is still unknown.',
-  read_idea: "read_idea {} — the app's idea: summary, problem, audience, monetization, constraints, assumptions, and whether it is clear.",
+  read_idea: "read_idea {} — the app's idea: summary, problem, audience, monetization, constraints, countries (country), legal profile (legalProfile), assumptions, and whether it is clear.",
   business_plan_overview:
     "business_plan_overview {} — the current business plan version (blocks with statements and support, financial inputs, break-even per scenario) or null, and the nine block definitions with the research sections that feed them.",
   save_business_plan:
@@ -236,6 +236,8 @@ type PlanView = {
   version: number;
   createdBy: string;
   readiness: { confirmed: number; hypothesis: number; missing: number };
+  legalReadiness?: { confirmed: number; hypothesis: number; missing: number };
+  legal?: Array<{ key: string; status: string }>;
   blocks: Array<{ key: string; status: string; statements: Array<{ text: string; support: string; citations: Array<{ findingId: string }> }>; gap: string | null }>;
   currency: string;
   inputs: Array<{ key: string; value: number; kind: string; source: string | null; note: string }>;
@@ -248,6 +250,8 @@ function summarizePlan(plan: PlanView): JsonValue {
     version: plan.version,
     createdBy: plan.createdBy,
     readiness: plan.readiness,
+    legalReadiness: plan.legalReadiness ?? null,
+    legal: (plan.legal ?? []).map(({ key, status }) => ({ key, status })),
     blocks: plan.blocks.map((block) => ({
       key: block.key,
       status: block.status,

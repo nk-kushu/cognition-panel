@@ -7,7 +7,7 @@
     {
       "id": "research",
       "name": "Research Agent",
-      "description": "Fills cognition's Research stages: extracts cited facts from Knowledge documents (/analyze), gathers new evidence from market, competitor, ad, community and review sources (/discover) explains the blind spots (/gaps) and writes the business plan as a Lean Canvas with a financial model (/plan). Writes only proposed findings through the cognition API.",
+      "description": "Fills cognition's Research stages: extracts cited facts from Knowledge documents (/analyze), gathers new evidence from market, competitor, ad, community and review sources (/discover) explains the blind spots (/gaps), collects what official legal sources say (/legal) and writes the business plan as a Lean Canvas with a financial model (/plan). Writes only proposed findings through the cognition API.",
       "directory": ".",
       "entry": "agent.ts",
       "commands": [
@@ -24,6 +24,10 @@
         {
           "name": "/gaps",
           "description": "What are the blind spots and what to research next"
+        },
+        {
+          "name": "/legal",
+          "description": "Find what laws and regulators say about the product (official sources only, not legal advice)"
         },
         {
           "name": "/plan",

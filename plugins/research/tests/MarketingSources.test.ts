@@ -231,6 +231,29 @@ test("save_source marks competitor data apart and refuses to mix weights or inve
   assert.equal((await run.call("save_source", { resultIds: [web.results[0].id], title: "Pricing" })).evidenceType, "competitor_data");
 });
 
+test("save_source marks official_source only when every result is from an official https domain", async () => {
+  const run = setup(
+    { TAVILY_API_KEY: "t" },
+    {
+      "https://api.tavily.com/search": () => ({
+        results: [
+          { title: "GDPR Article 6", url: "https://eur-lex.europa.eu/eli/reg/2016/679/oj", content: "Processing shall be lawful only if the data subject has given consent." },
+          { title: "A law firm blog", url: "https://lawfirm.example/gdpr", content: "GDPR means you need consent." },
+          { title: "A fake host", url: "https://europa.eu.evil.example/gdpr", content: "Official-looking text." },
+          { title: "Plain http", url: "http://eur-lex.europa.eu/x", content: "Not https." },
+        ],
+      }),
+    },
+    { "POST /local-apps/app-1/knowledge/documents": () => [{ id: "doc-1" }] },
+  );
+  const web = await run.call("search_web", { query: "gdpr consent" });
+  const [official, blog, fake, plain] = web.results.map((result: { id: string }) => result.id);
+  assert.equal((await run.call("save_source", { resultIds: [official], title: "GDPR art 6", official: true })).evidenceType, "official_source");
+  for (const bad of [blog, fake, plain]) assert.match((await run.call("save_source", { resultIds: [bad], title: "x", official: true })).error, /Not an official source/);
+  assert.equal((await run.call("save_source", { resultIds: [blog], title: "Blog" })).evidenceType, "competitor_data");
+  assert.match((await run.call("save_source", { resultIds: [official, blog], title: "mixed", official: true })).error, /Not an official source/);
+});
+
 test("search and save limits end a run's spending", async () => {
   const net = network({ "https://hn.algolia.com/api/v1/search": () => hnHits });
   const signal = new AbortController().signal;

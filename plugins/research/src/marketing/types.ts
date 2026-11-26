@@ -39,7 +39,7 @@ export interface ISourceProvider {
 export type Env = Readonly<Record<string, string | undefined>>;
 
 /** How strongly cognition weighs a document: people's own words count most. */
-export type EvidenceKind = "real_user_quote" | "competitor_data";
+export type EvidenceKind = "real_user_quote" | "official_source" | "competitor_data";
 
 export function evidenceKindOf(category: Category): EvidenceKind {
   return category === "community" || category === "reviews" ? "real_user_quote" : "competitor_data";

@@ -40,6 +40,10 @@
           "description": "What are the blind spots and what to research next"
         },
         {
+          "name": "/legal",
+          "description": "Find what laws and regulators say about the product (official sources only, not legal advice)"
+        },
+        {
           "name": "/plan",
           "description": "Write the business plan: a Lean Canvas and a financial model from accepted findings"
         }
