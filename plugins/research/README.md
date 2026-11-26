@@ -8,6 +8,7 @@ its document and each `fact` against its section. Findings it writes start as `p
 |---|---|---|
 | `analyze` | `/analyze <document id or title>` | Reads a Knowledge document in parts, proposes cited facts, links them to known findings, classifies the source. |
 | `discover` | `/discover <тема>` | Goes out and finds evidence: demand, competitors, ads, people's own words, reviews. Saves the raw results as Knowledge documents, then files cited facts like `/analyze`. |
+| `plan` | `/plan` | Writes the business plan: a Lean Canvas from **accepted** findings only (each statement cites them; empty blocks get a `gap`), plus the inputs of the financial model. cognition checks the citations and computes every number. |
 | `gaps` | `/gaps` | Explains the blind spots and gives concrete next tasks. Read-only. Also the fallback. |
 
 Without a command, one kushibot `DecisionUnit` call on the fast model picks the capability.
@@ -58,6 +59,9 @@ How a run goes: `research_overview` → pick up to 3 weak sections → search �
 | `read_document` | `GET …/knowledge/documents/:id` (20 000 chars per part) | 30 parts |
 | `propose_finding` | `POST /harness/findings` | 40 |
 | `link_findings` | `POST /harness/findings/:id/links` | 40 |
+| `read_idea` | `GET /local-apps/:id/idea` | — |
+| `business_plan_overview` | `GET …/business-plan` | — |
+| `save_business_plan` | `POST …/business-plan/versions` (only accepted findings may be cited) | 3 |
 | `set_evidence_type` | `PATCH …/research/documents/:id/evidence-type` (only when unknown) | — |
 
 A 4xx from cognition comes back to the model as `{ error }` so it can correct itself; 5xx and network

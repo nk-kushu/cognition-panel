@@ -7,7 +7,7 @@
     {
       "id": "cognition",
       "name": "Cognition",
-      "description": "Routes each message to the right agent: idea and template questions to the Cognition Assistant (idea-planner), research analysis, evidence discovery and blind spots to the Research Agent. Slash commands of both work here.",
+      "description": "Routes each message to the right agent: idea and template questions to the Cognition Assistant (idea-planner), research analysis, evidence discovery, blind spots and the business plan to the Research Agent. Slash commands of both work here.",
       "directory": ".",
       "entry": "agent.ts",
       "commands": [
@@ -38,6 +38,10 @@
         {
           "name": "/gaps",
           "description": "Кои са белите петна и какво да проуча следващо"
+        },
+        {
+          "name": "/plan",
+          "description": "Напиши бизнес план: Lean Canvas и финансов модел от приетите факти"
         }
       ]
     }

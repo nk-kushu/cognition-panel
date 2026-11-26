@@ -7,14 +7,16 @@ import { ToolUseError } from "./ToolBox";
 export const DOCUMENT_PART_CHARS = 20_000;
 
 /** Per-run caps; a spent cap is reported to the model, which then has to finish. */
-export type ResearchLimits = Readonly<{ documentParts: number; findings: number; links: number }>;
-export const DEFAULT_RESEARCH_LIMITS: ResearchLimits = { documentParts: 30, findings: 40, links: 40 };
+export type ResearchLimits = Readonly<{ documentParts: number; findings: number; links: number; planSaves: number }>;
+export const DEFAULT_RESEARCH_LIMITS: ResearchLimits = { documentParts: 30, findings: 40, links: 40, planSaves: 3 };
 
 /** What the run did, for the final summary. */
 export class RunTally {
   proposed: string[] = [];
   rejected = 0;
   links = 0;
+  /** The business plan version this run saved, if any. */
+  planVersion: number | null = null;
 }
 
 /** Told to the model in the instructions; the ids must match `call`. */
@@ -27,6 +29,11 @@ export const RESEARCH_TOOL_DESCRIPTIONS = {
   link_findings: 'link_findings {"fromId":"<new finding id>","toId":"<known finding id>","kind":"supports"|"conflicts"} — relates two findings.',
   set_evidence_type:
     'set_evidence_type {"documentId":"…","evidenceType":"real_user_quote"|"competitor_data"|"ai_brainstorm"} — classifies a document whose evidenceType is still unknown.',
+  read_idea: "read_idea {} — the app's idea: summary, problem, audience, monetization, constraints, assumptions, and whether it is clear.",
+  business_plan_overview:
+    "business_plan_overview {} — the current business plan version (blocks with statements and support, financial inputs, break-even per scenario) or null, and the nine block definitions with the research sections that feed them.",
+  save_business_plan:
+    'save_business_plan {"canvas":{…},"financials":{…}} — saves a new plan version. cognition refuses citations of findings that are not accepted and computes every number itself. Answers with readiness and break-even per scenario.',
 } as const;
 
 export type ResearchToolId = keyof typeof RESEARCH_TOOL_DESCRIPTIONS;
@@ -37,7 +44,7 @@ type Overview = {
     percent: number;
     checks: Array<{ id: string; label: string; passed: boolean; detail: string }>;
     blockers: Array<{ message: string }>;
-    sections: Array<{ key: string; findings: Array<{ findingId: string; status: string; evidence: string; statement: string }> }>;
+    sections: Array<{ key: string; findings: Array<{ findingId: string; status: string; evidence: string; statement: string; fact?: Record<string, unknown> }> }>;
   }>;
   featuresToDrop: Array<{ title: string }>;
 };
@@ -47,7 +54,8 @@ type Document = { id: string; title: string; evidenceType: string; contentMd: st
 /** Research reads and writes for one app, all through the cognition API. */
 export class ResearchTools implements IToolSet {
   readonly ids: readonly ResearchToolId[];
-  private readonly used = { documentParts: 0, findings: 0, links: 0 };
+  private readonly used = { documentParts: 0, findings: 0, links: 0, planSaves: 0 };
+  private readonly limits: ResearchLimits;
 
   constructor(
     private readonly client: Pick<CognitionClient, "get" | "post" | "patch">,
@@ -56,9 +64,10 @@ export class ResearchTools implements IToolSet {
     readonly tally: RunTally,
     /** Which tools this capability may use; read-only capabilities leave out the writers. */
     ids: readonly ResearchToolId[],
-    private readonly limits: ResearchLimits = DEFAULT_RESEARCH_LIMITS,
+    limits: Partial<ResearchLimits> = {},
   ) {
     this.ids = ids;
+    this.limits = { ...DEFAULT_RESEARCH_LIMITS, ...limits };
   }
 
   async call(toolId: string, args: Record<string, unknown>): Promise<JsonValue> {
@@ -75,6 +84,12 @@ export class ResearchTools implements IToolSet {
         return this.linkFindings(args);
       case "set_evidence_type":
         return this.setEvidenceType(args);
+      case "read_idea":
+        return this.readIdea();
+      case "business_plan_overview":
+        return this.businessPlanOverview();
+      case "save_business_plan":
+        return this.saveBusinessPlan(args);
       default:
         throw new ToolUseError(`Unknown tool ${toolId}.`);
     }
@@ -98,7 +113,15 @@ export class ResearchTools implements IToolSet {
       findings: overview.stages
         .flatMap((stage) => stage.sections.flatMap((section) => section.findings.map((finding) => ({ ...finding, section: section.key }))))
         .slice(0, 200)
-        .map((finding) => ({ id: finding.findingId, section: finding.section, status: finding.status, evidence: finding.evidence, statement: finding.statement })),
+        .map((finding) => ({
+          id: finding.findingId,
+          section: finding.section,
+          status: finding.status,
+          evidence: finding.evidence,
+          statement: finding.statement,
+          // Structured numbers (prices, costs) the business plan reads; left out when empty.
+          ...(finding.fact && Object.keys(finding.fact).length ? { fact: finding.fact as JsonValue } : {}),
+        })),
     };
   }
 
@@ -181,11 +204,63 @@ export class ResearchTools implements IToolSet {
     return { evidenceType: args.evidenceType as string };
   }
 
+  private async readIdea(): Promise<JsonValue> {
+    const idea = await this.client.get<{ clear: boolean; missing: string[]; version: number; content: Record<string, unknown> }>(`${this.app}/idea`);
+    return { clear: idea.clear, missing: idea.missing, version: idea.version, content: idea.content as JsonValue };
+  }
+
+  private async businessPlanOverview(): Promise<JsonValue> {
+    this.progress("Reading the business plan");
+    const overview = await this.client.get<{ plan: PlanView | null; versions: number; blocks: unknown }>(`${this.app}/business-plan`);
+    return { versions: overview.versions, blocks: overview.blocks as JsonValue, plan: overview.plan ? summarizePlan(overview.plan) : null };
+  }
+
+  private async saveBusinessPlan(args: Record<string, unknown>): Promise<JsonValue> {
+    if (typeof args.canvas !== "object" || args.canvas === null || typeof args.financials !== "object" || args.financials === null)
+      throw new ToolUseError("save_business_plan needs canvas and financials objects.");
+    this.spend("planSaves");
+    const plan = await this.client.post<PlanView>(`${this.app}/business-plan/versions`, { canvas: args.canvas, financials: args.financials });
+    this.tally.planVersion = plan.version;
+    this.progress(`Saved business plan v${plan.version}: ${plan.readiness.confirmed} of ${plan.blocks.length} blocks confirmed`);
+    return summarizePlan(plan);
+  }
+
   private spend(kind: keyof ResearchLimits): void {
     if (this.used[kind] >= this.limits[kind])
       throw new ToolUseError(`The ${kind} limit for this run (${this.limits[kind]}) is used up. Finish with what you have.`);
     this.used[kind] += 1;
   }
+}
+
+type PlanView = {
+  version: number;
+  createdBy: string;
+  readiness: { confirmed: number; hypothesis: number; missing: number };
+  blocks: Array<{ key: string; status: string; statements: Array<{ text: string; support: string; citations: Array<{ findingId: string }> }>; gap: string | null }>;
+  currency: string;
+  inputs: Array<{ key: string; value: number; kind: string; source: string | null; note: string }>;
+  scenarios: Array<{ key: string; breakEvenMonth: number | null; profitableMonth: number | null; months: Array<{ month: number; revenue: number; profit: number; cumulative: number }> }>;
+};
+
+/** The plan without the month-by-month table: what the model needs to judge and report. */
+function summarizePlan(plan: PlanView): JsonValue {
+  return {
+    version: plan.version,
+    createdBy: plan.createdBy,
+    readiness: plan.readiness,
+    blocks: plan.blocks.map((block) => ({
+      key: block.key,
+      status: block.status,
+      gap: block.gap,
+      statements: block.statements.map((statement) => ({ text: statement.text, support: statement.support, findingIds: statement.citations.map((citation) => citation.findingId) })),
+    })),
+    currency: plan.currency,
+    inputs: plan.inputs.map(({ key, value, kind, source, note }) => ({ key, value, kind, source, note })),
+    scenarios: plan.scenarios.map((scenario) => {
+      const month12 = scenario.months[11];
+      return { key: scenario.key, breakEvenMonth: scenario.breakEvenMonth, profitableMonth: scenario.profitableMonth, month12Revenue: month12?.revenue ?? null, month24Cumulative: scenario.months.at(-1)?.cumulative ?? null };
+    }),
+  };
 }
 
 function requiredString(value: unknown, name: string): string {

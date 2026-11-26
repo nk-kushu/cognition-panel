@@ -7,7 +7,7 @@
     {
       "id": "research",
       "name": "Research Agent",
-      "description": "Fills cognition's Research stages: extracts cited facts from Knowledge documents (/analyze), gathers new evidence from market, competitor, ad, community and review sources (/discover) and explains the blind spots (/gaps). Writes only proposed findings through the cognition API.",
+      "description": "Fills cognition's Research stages: extracts cited facts from Knowledge documents (/analyze), gathers new evidence from market, competitor, ad, community and review sources (/discover) explains the blind spots (/gaps) and writes the business plan as a Lean Canvas with a financial model (/plan). Writes only proposed findings through the cognition API.",
       "directory": ".",
       "entry": "agent.ts",
       "commands": [
@@ -24,6 +24,10 @@
         {
           "name": "/gaps",
           "description": "Кои са белите петна и какво да проуча следващо"
+        },
+        {
+          "name": "/plan",
+          "description": "Напиши бизнес план: Lean Canvas и финансов модел от приетите факти"
         }
       ]
     }
