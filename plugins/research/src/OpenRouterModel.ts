@@ -19,16 +19,34 @@ type CatalogModel = Readonly<{
   id: string;
   context_length: number;
   top_provider?: { max_completion_tokens?: number | null };
+  supported_parameters?: readonly string[];
 }>;
+
+/**
+ * Models whose OpenRouter catalog entry lists `response_format` can be told to answer with one JSON object, which keeps
+ * a model such as kimi-k3 from answering in its own tool-call markup. Set OPENROUTER_JSON_MODE=off to switch it off.
+ */
+export function supportsJsonMode(model: Readonly<{ supported_parameters?: readonly string[] }> | undefined): boolean {
+  return Boolean(model?.supported_parameters?.includes("response_format")) && process.env.OPENROUTER_JSON_MODE?.toLowerCase() !== "off";
+}
+
+/** Adds OpenAI-style JSON mode to a serialized /responses body; a format the caller already chose is left alone. */
+export function withJsonMode(body: Record<string, unknown>, enabled: boolean): Record<string, unknown> {
+  if (!enabled) return body;
+  const text = typeof body.text === "object" && body.text !== null ? (body.text as Record<string, unknown>) : {};
+  if (text.format !== undefined) return body;
+  return { ...body, text: { ...text, format: { type: "json_object" } } };
+}
+
 
 class OpenRouterTransport implements IOpenAiResponsesTransport {
   private readonly transport: OpenAiHttpTransport;
-  constructor(apiKey: string) {
+  constructor(apiKey: string, jsonMode = false) {
     // Kushibot's serializer rejects unknown fields, so routing is added after serialization.
     this.transport = new OpenAiHttpTransport(apiKey, async (_url, init) => {
       const response = await fetch("https://openrouter.ai/api/v1/responses", {
         ...init,
-        body: JSON.stringify({ ...JSON.parse(String(init?.body)), provider: OPENROUTER_PRIVACY }),
+        body: JSON.stringify(withJsonMode({ ...JSON.parse(String(init?.body)), provider: OPENROUTER_PRIVACY }, jsonMode)),
       });
       // kushibot reports a failed call only as "unavailable"; say why in the run output.
       if (!response.ok) {
@@ -88,6 +106,6 @@ export class OpenRouterModels {
       maxResponseBytes: 1_048_576,
       supportsPromptCacheKey: false,
     };
-    return { profile, gateway: new OpenAiTextGatewayFactory(() => new OpenRouterTransport(this.apiKey)).create(profile) };
+    return { profile, gateway: new OpenAiTextGatewayFactory(() => new OpenRouterTransport(this.apiKey, supportsJsonMode(model))).create(profile) };
   }
 }
