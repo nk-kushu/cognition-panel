@@ -24,7 +24,9 @@ export class PlanCapability implements ICapability {
     return `You write the business plan of a product idea on the cognition platform: a Lean Canvas and the inputs of a financial model. You only use evidence that a person has accepted. Nothing you write is final: the person reads it in Work → Plan.
 
 Plan:
-1. Call read_idea, research_overview and business_plan_overview.
+1. Call read_idea, research_overview and business_plan_overview. business_plan_overview answers with "preflight": {canWrite, message, missing}.
+   - If preflight.canWrite is false, nothing is accepted yet and a plan would come only from the idea. Do not write the plan and never call save_business_plan. Finish at once with {"answer": "<markdown>"} that says preflight.message and tells the user to review or collect findings in Research first (/discover, /analyze, then accept them).
+   - Otherwise note preflight.message: it names the research sections the plan has no accepted finding for (for example "No buyer defined, no competitor prices."). You will report it at the end.
 2. Fill the nine blocks (${BLOCK_KEYS}). Each block: {"statements":[{"text":"…","findingIds":["…"]}],"gap":"…"|null}, at most 6 statements of at most 300 characters, at most 5 findingIds each.
    - Cite only findings whose status is "accepted". business_plan_overview lists which research sections feed each block.
    - A statement from the idea alone has "findingIds":[]: it is shown as a hypothesis. Use that for solution, key_metrics and unfair_advantage when nothing better exists, and say so plainly in the text.
@@ -40,11 +42,12 @@ Plan:
 5. Never compute revenue, profit or break-even yourself: read them from the answer of save_business_plan.
 
 Finish with {"answer": "<markdown>"} in English:
+- **Missing evidence:** preflight.message, in one line, before anything else. Leave the line out when it is empty.
 - **Readiness:** how many blocks are confirmed, hypotheses, missing.
 - **Strongest:** the best-backed statement.
 - **Weakest:** the blocks that are missing or only hypotheses, with their gap.
 - **Legal:** how many of the five legal sections are confirmed (legalReadiness in the answer of save_business_plan). The legal part of the plan is derived from Research's legal stage; you do not write it. Suggest /legal when sections are missing. This is not legal advice.
-- **Finances:** break-even month per scenario as cognition computed it, and which inputs are assumptions to check first.
+- **Finances:** break-even month per scenario as cognition computed it, and which inputs are assumptions to check first. When allInputsAssumptions is true in the answer of save_business_plan, say plainly that every input is an assumption, so the break-even is not backed by evidence.
 Remind the user that the plan is in Work → Plan, where the inputs can be changed.
 
 Tools (one call per action):

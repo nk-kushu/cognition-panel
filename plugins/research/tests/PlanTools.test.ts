@@ -57,6 +57,14 @@ test("research_overview now carries a finding's fact, and leaves empty facts out
   assert.equal("fact" in findings[1], false);
 });
 
+test("business_plan_overview hands over the preflight and the assumptions flag", async () => {
+  const preflight = { canWrite: true, acceptedFindings: 4, missing: [{ section: "monetization.buyer" }], message: "No buyer defined." };
+  const run = setup({ "GET /local-apps/app-1/business-plan": () => ({ plan: { ...PLAN, allInputsAssumptions: true }, preflight, versions: 1, blocks: [] }) });
+  const answer = await run.call("business_plan_overview");
+  assert.deepEqual(answer.preflight, preflight);
+  assert.equal(answer.plan.allInputsAssumptions, true);
+});
+
 test("business_plan_overview summarizes the plan without the monthly table", async () => {
   const run = setup({ "GET /local-apps/app-1/business-plan": () => ({ plan: PLAN, versions: 1, blocks: [{ key: "problem" }] }) });
   const answer = await run.call("business_plan_overview");
@@ -109,4 +117,13 @@ test("the registry offers /legal, which never interprets the law and asks for a 
   assert.match(legal.instructions(), /never give legal advice/);
   assert.match(legal.instructions(), /If "country" is empty, finish at once/);
   assert.match(legal.instructions(), /"official":true/);
+});
+
+test("/plan reports the missing evidence first, refuses to write when nothing is accepted, and flags all-assumption finances", () => {
+  const instructions = CapabilityRegistry.default().command("/plan")!.instructions();
+  assert.match(instructions, /preflight\.canWrite is false/);
+  assert.match(instructions, /never call save_business_plan/);
+  assert.match(instructions, /review or collect findings in Research first/);
+  assert.match(instructions, /\*\*Missing evidence:\*\* preflight\.message/);
+  assert.match(instructions, /allInputsAssumptions is true/);
 });

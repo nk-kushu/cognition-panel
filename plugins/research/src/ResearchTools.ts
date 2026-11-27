@@ -31,7 +31,7 @@ export const RESEARCH_TOOL_DESCRIPTIONS = {
     'set_evidence_type {"documentId":"…","evidenceType":"real_user_quote"|"official_source"|"competitor_data"|"ai_brainstorm"} — classifies a document whose evidenceType is still unknown.',
   read_idea: "read_idea {} — the app's idea: summary, problem, audience, monetization, constraints, countries (country), legal profile (legalProfile), assumptions, and whether it is clear.",
   business_plan_overview:
-    "business_plan_overview {} — the current business plan version (blocks with statements and support, financial inputs, break-even per scenario) or null, and the nine block definitions with the research sections that feed them.",
+    "business_plan_overview {} — preflight (canWrite, message, missing sections), the current business plan version (blocks with statements and support, financial inputs, break-even per scenario, allInputsAssumptions) or null, and the nine block definitions with the research sections that feed them.",
   save_business_plan:
     'save_business_plan {"canvas":{…},"financials":{…}} — saves a new plan version. cognition refuses citations of findings that are not accepted and computes every number itself. Answers with readiness and break-even per scenario.',
 } as const;
@@ -211,8 +211,8 @@ export class ResearchTools implements IToolSet {
 
   private async businessPlanOverview(): Promise<JsonValue> {
     this.progress("Reading the business plan");
-    const overview = await this.client.get<{ plan: PlanView | null; versions: number; blocks: unknown }>(`${this.app}/business-plan`);
-    return { versions: overview.versions, blocks: overview.blocks as JsonValue, plan: overview.plan ? summarizePlan(overview.plan) : null };
+    const overview = await this.client.get<{ plan: PlanView | null; versions: number; blocks: unknown; preflight?: unknown }>(`${this.app}/business-plan`);
+    return { versions: overview.versions, preflight: (overview.preflight ?? null) as JsonValue, blocks: overview.blocks as JsonValue, plan: overview.plan ? summarizePlan(overview.plan) : null };
   }
 
   private async saveBusinessPlan(args: Record<string, unknown>): Promise<JsonValue> {
@@ -236,6 +236,7 @@ type PlanView = {
   version: number;
   createdBy: string;
   readiness: { confirmed: number; hypothesis: number; missing: number };
+  allInputsAssumptions?: boolean;
   legalReadiness?: { confirmed: number; hypothesis: number; missing: number };
   legal?: Array<{ key: string; status: string }>;
   blocks: Array<{ key: string; status: string; statements: Array<{ text: string; support: string; citations: Array<{ findingId: string }> }>; gap: string | null }>;
@@ -250,6 +251,7 @@ function summarizePlan(plan: PlanView): JsonValue {
     version: plan.version,
     createdBy: plan.createdBy,
     readiness: plan.readiness,
+    allInputsAssumptions: plan.allInputsAssumptions ?? null,
     legalReadiness: plan.legalReadiness ?? null,
     legal: (plan.legal ?? []).map(({ key, status }) => ({ key, status })),
     blocks: plan.blocks.map((block) => ({
