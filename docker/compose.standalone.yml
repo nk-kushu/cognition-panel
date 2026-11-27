@@ -59,7 +59,8 @@ services:
       KUSHEX_RUNS_DIR: /var/lib/kushex/runs
       KUSHEX_EXCLUDED_DIRECTORIES: ${KUSHEX_EXCLUDED_DIRECTORIES-dist,build,coverage,.next,.nuxt,.output,.cache,.turbo,.vite}
       # 5173: cognition embeds the panel on its template pages and proxies /kushex-api here.
-      KUSHEX_ALLOWED_ORIGINS: http://localhost:3050,http://127.0.0.1:3050,http://localhost:5173,http://127.0.0.1:5173
+      # Override in .env to also allow a Cloudflare quick tunnel origin (https://<name>.trycloudflare.com).
+      KUSHEX_ALLOWED_ORIGINS: ${KUSHEX_ALLOWED_ORIGINS:-http://localhost:3050,http://127.0.0.1:3050,http://localhost:5173,http://127.0.0.1:5173}
       # Agents run from the chat read model credentials from the backend's environment.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-}

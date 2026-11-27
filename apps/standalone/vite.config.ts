@@ -37,6 +37,9 @@ export default defineConfig(async ({ command }) => ({
   },
   server: {
     port: 5173,
+    // Cognition reaches the panel through a Cloudflare quick tunnel, and the
+    // browser Host stays the tunnel's. Same suffix as cognition's vite.config.ts.
+    allowedHosts: [".trycloudflare.com"],
     proxy: {
       "/api": {
         target: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:3000",
