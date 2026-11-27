@@ -26,6 +26,13 @@ import type { CapabilityRegistry } from "./capabilities/CapabilityRegistry";
 import { CapabilityRouter } from "./routing/CapabilityRouter";
 import type { TemplateCatalog } from "./TemplateCatalog";
 
+/**
+ * The result contract takes exactly {"answer": "<markdown>"}. The capabilities describe the content; this says the
+ * shape, because a model told only to write "sections" invents its own fields and has its result rejected.
+ */
+export const FINAL_ANSWER_RULE =
+  'Your final action is {"kind":"final","value":{"answer":"<markdown>"}}: the whole answer, with its sections, as ONE Markdown string in "answer". Never put other fields in "value" (no "idea", "templates", "order" or similar): anything but "answer" is rejected.';
+
 export type AssistantModels = Readonly<Record<CapabilityModel, AgentModelBinding>>;
 
 /** What every capability may use, fixed for one chat message. */
@@ -58,7 +65,7 @@ class AssistantWorkflow implements IPolicy<IAgentSetupInput<AssistantRequest>, I
       answers,
       {
         apply: async () => ({
-          instructions: capability.instructions(),
+          instructions: `${capability.instructions()}\n\n${FINAL_ANSWER_RULE}`,
           input: { message: route.message, conversation: task.conversation.slice(-10) },
           tools: capability.tools(context),
           acceptance: { apply: async () => ({ accepted: true, feedback: "Accepted." }) },
