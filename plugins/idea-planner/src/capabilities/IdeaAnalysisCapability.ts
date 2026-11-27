@@ -17,7 +17,7 @@ export class IdeaAnalysisCapability implements ICapability {
 1. Understand the idea first. Work out the goal, who uses it and the core features, using the conversation for context.
    If the goal or the core features cannot be worked out, do not plan: answer only with the two or three questions that would settle it.
 2. Call list_templates once.
-3. Call read_template on each plausible candidate (usually 2-8). Read a single file with read_template_file only when the README does not settle whether a template fits.
+3. Call read_template on each plausible candidate (usually 2-8), one template per reply: never put two tool calls in one reply, read the next template after you get the previous one. Read a single file with read_template_file only when the README does not settle whether a template fits.
 4. Never name a template you did not read. Never invent endpoints or features that a template does not have.
 
 Write the answer in the user's language. Keep it short, with these sections:
