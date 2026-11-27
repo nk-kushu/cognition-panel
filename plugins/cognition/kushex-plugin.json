@@ -46,6 +46,10 @@
         {
           "name": "/plan",
           "description": "Write the business plan: a Lean Canvas and a financial model from accepted findings"
+        },
+        {
+          "name": "/sources",
+          "description": "Where to search by hand for this idea, and what to look for on each site"
         }
       ]
     }

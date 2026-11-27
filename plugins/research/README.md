@@ -10,6 +10,7 @@ its document and each `fact` against its section. Findings it writes start as `p
 | `discover` | `/discover <topic>` | Goes out and finds evidence: demand, competitors, ads, people's own words, reviews. Saves the raw results as Knowledge documents, then files cited facts like `/analyze`. |
 | `legal` | `/legal` | Finds what laws and regulators say about the product, for the legal stage of Research. Uses the idea's country and legal profile, saves only pages of an official domain as `official_source`, and files quoted rules without interpreting them. Not legal advice; a lawyer still checks the result. |
 | `plan` | `/plan` | Writes the business plan: a Lean Canvas from **accepted** findings only (each statement cites them; empty blocks get a `gap`), plus the inputs of the financial model. cognition checks the citations and computes every number. |
+| `sources` | `/sources` | Plans a search by hand: which sites (Reddit, Hacker News, G2, app stores, Meta Ad Library, search pages, Keyword Planner, Google Trends, Ads Transparency, competitor pricing pages, official legal sources) to open for this idea, what to search for on each, what to note, and which evidence type to choose when sending the page to Knowledge. Read-only; the catalog is in `src/sources.ts`. |
 | `gaps` | `/gaps` | Explains the blind spots and gives concrete next tasks. Read-only. Also the fallback. |
 
 Without a command, one kushibot `DecisionUnit` call on the fast model picks the capability.

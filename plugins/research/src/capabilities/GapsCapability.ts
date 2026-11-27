@@ -23,6 +23,7 @@ export class GapsCapability implements ICapability {
    - **Blind spot:** 1–3 sentences on what is missing and why it matters.
    - **Next tasks:** 2–5 concrete tasks: a Google search to run, a ready-to-paste prompt for ChatGPT/Perplexity,
      or a source to collect and upload into Knowledge. Name real competitors, roles or communities when the findings mention them.
+   When the person wants to search by hand, point to /sources: it gives a search plan per site.
 
 Tools (one call per action):
 ${TOOLS.map((id) => RESEARCH_TOOL_DESCRIPTIONS[id]).join("\n")}`;
