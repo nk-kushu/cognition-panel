@@ -7,43 +7,18 @@ its document and each `fact` against its section. Findings it writes start as `p
 | Capability | Command | What it does |
 |---|---|---|
 | `analyze` | `/analyze <document id or title>` | Reads a Knowledge document in parts, proposes cited facts, links them to known findings, classifies the source. |
-| `discover` | `/discover <topic>` | Goes out and finds evidence: demand, competitors, ads, people's own words, reviews. Saves the raw results as Knowledge documents, then files cited facts like `/analyze`. |
-| `legal` | `/legal` | Finds what laws and regulators say about the product, for the legal stage of Research. Uses the idea's country and legal profile, saves only pages of an official domain as `official_source`, and files quoted rules without interpreting them. Not legal advice; a lawyer still checks the result. |
 | `plan` | `/plan` | Writes the business plan: a Lean Canvas from **accepted** findings only (each statement cites them; empty blocks get a `gap`), plus the inputs of the financial model. cognition checks the citations and computes every number. |
 | `sources` | `/sources` | Plans a search by hand: which sites (Reddit, Hacker News, G2, app stores, Meta Ad Library, search pages, Keyword Planner, Google Trends, Ads Transparency, competitor pricing pages, official legal sources) to open for this idea, what to search for on each, what to note, and which evidence type to choose when sending the page to Knowledge. Read-only; the catalog is in `src/sources.ts`. |
 | `gaps` | `/gaps` | Explains the blind spots and gives concrete next tasks. Read-only. Also the fallback. |
 
 Without a command, one kushibot `DecisionUnit` call on the fast model picks the capability.
 
-## `/discover`: where the evidence comes from
+## Evidence comes from you
 
-Two sources per category. A source without its key is skipped and named in the answer; the other one still runs.
-
-| Category | Tool | Sources (setting) | Evidence weight |
-|---|---|---|---|
-| Keywords and demand | `search_keywords` | `dataforseo-volume`, `google-trends` (`DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD`) | competitor data |
-| Web search | `search_web` | `tavily` (`TAVILY_API_KEY`) → `brave` (`BRAVE_SEARCH_API_KEY`) | competitor data |
-| Competitor ads | `search_ads` | `meta-ads` (`META_AD_LIBRARY_TOKEN`), `google-ads` (DataForSEO) | competitor data |
-| Communities | `search_community` | `reddit` (`REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`), `hackernews` (no key) | real user quote |
-| Reviews | `search_reviews` | `google-play`, `app-store` (DataForSEO), `g2` (`FIRECRAWL_API_KEY`) | real user quote |
-| Pages | `fetch_page` | `firecrawl` (`FIRECRAWL_API_KEY`) → `static-fetch` (no key, no JavaScript) | competitor data |
-
-Where the keys come from: **cognition → Settings → AI → Market sources**. Saving a key there stores it encrypted in cognition and sends it to
-Cognition Panel (`PUT /api/integrations/marketing/<NAME>`), which keeps its own encrypted copy and hands it to this agent as `credentials`
-(the same path as the OpenRouter key). The environment variable of the same name is the fallback when no key was saved.
-Optional, environment only: `META_GRAPH_VERSION` (default `v27.0`), `FIRECRAWL_API_URL`.
-
-How a run goes: `research_overview` → pick up to 3 weak sections → search → `save_source` → `read_document` → `propose_finding`.
-
-- **Quotes stay real.** Search results are kept inside the run under ids (`r1`, `r2`, …). `save_source` writes the provider's own text
-  into the document, so cognition's quote check runs against what the source said, not what the model remembers.
-- **Evidence type is not the model's call.** Communities and reviews are saved as `real_user_quote`, everything else as `competitor_data`; results of
-  different weight cannot share a document.
-- **Untrusted input.** Result text is data. `fetch_page` refuses localhost, private and Docker-internal addresses (checked by name, not by DNS).
-  API keys never appear in tool results.
-- **Limits per run:** 14 searches, 8 page reads, 6 saved documents (`DEFAULT_MARKETING_LIMITS`), plus the finding limits above.
-- **Known limits.** Meta publishes commercial ads only for some regions (EU/UK); elsewhere only political ads. Google Ads results carry
-  advertiser, format and dates, not ad text. App reviews are queued by DataForSEO and take up to about a minute. The static page reader cannot run JavaScript.
+The agent does not search the web. The evidence is what you put into **Knowledge**: pasted text, files, or pages sent with the
+Cognition Capture browser extension (`cognition-extension`). `/sources` says where to look and what to note on each site; `/analyze`
+turns the documents into cited findings. Set the evidence type of each document yourself (real people, official source, competitor
+data, AI idea): it decides how much a finding weighs.
 
 ## How it finds the app and cognition
 

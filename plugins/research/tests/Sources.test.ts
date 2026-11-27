@@ -48,6 +48,6 @@ test("the registry offers /sources, read-only, with the whole guide and the no-i
 test("/sources fetches and files nothing: its tools are the three read-only research tools", () => {
   const sources = CapabilityRegistry.default().command("/sources")!;
   const seen: string[][] = [];
-  sources.tools({ research: (ids: readonly string[]) => (seen.push([...ids]), { ids, call: async () => ({}) }), marketing: () => { throw new Error("no marketing tools"); } } as never);
+  sources.tools({ research: (ids: readonly string[]) => (seen.push([...ids]), { ids, call: async () => ({}) }) } as never);
   assert.deepEqual(seen, [["research_overview", "read_idea", "list_documents"]]);
 });

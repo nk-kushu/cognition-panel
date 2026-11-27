@@ -1,9 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { ICapability } from "./Capability";
 import { AnalyzeCapability } from "./AnalyzeCapability";
-import { DiscoverCapability } from "./DiscoverCapability";
 import { GapsCapability } from "./GapsCapability";
-import { LegalCapability } from "./LegalCapability";
 import { PlanCapability } from "./PlanCapability";
 import { SourcesCapability } from "./SourcesCapability";
 
@@ -31,7 +29,7 @@ export class CapabilityRegistry {
 
   static default(): CapabilityRegistry {
     const registry = new CapabilityRegistry(
-      [new AnalyzeCapability(), new DiscoverCapability(), new GapsCapability(), new LegalCapability(), new PlanCapability(), new SourcesCapability()],
+      [new AnalyzeCapability(), new GapsCapability(), new PlanCapability(), new SourcesCapability()],
       "gaps",
       "gaps",
     );

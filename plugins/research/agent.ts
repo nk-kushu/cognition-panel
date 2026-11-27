@@ -2,9 +2,6 @@ import type { IScopedDebugRecorderFactory } from "kushibot";
 import { resolveAppId } from "./src/AppResolver";
 import { CognitionClient, cognitionApiUrl } from "./src/CognitionClient";
 import { CapabilityRegistry } from "./src/capabilities/CapabilityRegistry";
-import { Http } from "./src/marketing/Http";
-import { MarketingTools } from "./src/marketing/MarketingTools";
-import { createProviders } from "./src/marketing/providers";
 import { DEFAULT_FAST_MODEL, DEFAULT_MAIN_MODEL, OpenRouterModels } from "./src/OpenRouterModel";
 import { createResearchAgent } from "./src/ResearchAgent";
 import type { ConversationTurn } from "./src/ResearchRequest";
@@ -18,7 +15,7 @@ type ChatRequest = Readonly<{
   progress(message: string): void;
   /** Set by cognition when it starts the run: `appId`, optionally `appName` and `cognitionApiUrl`. */
   configuration?: Readonly<Record<string, unknown>>;
-  /** Present because the server lists this agent in AGENTS_WITH_PROVIDER_CREDENTIALS: `openrouter` and the market-source keys saved in cognition. */
+  /** Present because the server lists this agent in AGENTS_WITH_PROVIDER_CREDENTIALS: `openrouter`, the key saved in cognition. */
   credentials?: Readonly<Record<string, string>>;
   debug?: IScopedDebugRecorderFactory;
   /** Loaded by the server; `conversation` holds the thread's earlier turns. */
@@ -44,10 +41,6 @@ export async function chat(request: ChatRequest): Promise<string> {
 
   const tally = new RunTally();
   const shared = new ResearchTools(client, appId, request.progress, tally, []);
-  // Keys saved in cognition's Settings → AI reach the run as credentials; the environment is the fallback.
-  // A source without its key is reported to the model, not fatal.
-  const sourceKeys = { ...process.env, ...request.credentials };
-  const marketing = new MarketingTools(client, appId, createProviders(sourceKeys, new Http(request.signal), request.signal), request.progress, []);
   const agent = createResearchAgent({
     registry: CapabilityRegistry.default(),
     models: {
@@ -57,7 +50,6 @@ export async function chat(request: ChatRequest): Promise<string> {
     environment: {
       // One tool set per run, so the limits hold across every tool box a capability builds.
       research: (ids) => ({ ids, call: (toolId, args) => shared.call(toolId, args) }),
-      marketing: (ids) => ({ ids, call: (toolId, args) => marketing.call(toolId, args) }),
       progress: request.progress,
     },
     ...(request.debug ? { debug: request.debug } : {}),
@@ -67,9 +59,8 @@ export async function chat(request: ChatRequest): Promise<string> {
     { signal: request.signal, onProgress: request.progress },
   );
   if (run.result) return run.result.answer;
-  const saved = marketing.saved.length ? ` It saved ${marketing.saved.length} source document(s) to Knowledge.` : "";
   const planSaved = tally.planVersion ? ` It saved business plan v${tally.planVersion}; see Work → Plan.` : "";
-  const done = (tally.proposed.length ? ` Before stopping it proposed ${tally.proposed.length} findings; review them in Research.` : "") + saved + planSaved;
+  const done = (tally.proposed.length ? ` Before stopping it proposed ${tally.proposed.length} findings; review them in Research.` : "") + planSaved;
   throw new Error(`The research agent stopped without an answer (${JSON.stringify(run.outcome).slice(0, 500)}).${done}`);
 }
 

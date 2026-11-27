@@ -1,8 +1,6 @@
 import { SecretCipher } from "../modules/openrouter/SecretCipher.js";
 import { OpenRouterService } from "../modules/openrouter/OpenRouterService.js";
 import { OpenRouterController } from "../modules/openrouter/OpenRouterController.js";
-import { MarketingCredentialService } from "../modules/marketing-credentials/MarketingCredentialService.js";
-import { MarketingCredentialController } from "../modules/marketing-credentials/MarketingCredentialController.js";
 import { LocalWorkspaceProposalService, LocalWorkspacePublicationService } from "kushibot";
 import { PluginCatalog } from "../modules/plugins/PluginCatalog.js";
 import { PluginsController } from "../modules/plugins/PluginsController.js";
@@ -146,7 +144,6 @@ export class ApplicationFactory {
     const agentConfig = new AgentConfigService(database.client, projects, memory, threads);
     const cipher = new SecretCipher(process.env.KUSHEX_CREDENTIAL_ENCRYPTION_KEY);
     const openrouter = new OpenRouterService(database.client, cipher, fetch);
-    const marketingCredentials = new MarketingCredentialService(database.client, cipher);
     const waits = new AgentWaits(database.client, projects, memory, this.logger);
     const runs = new AgentRunService(
       workspaces,
@@ -160,11 +157,8 @@ export class ApplicationFactory {
       agentConfig,
       waits,
       {
-        // The OpenRouter key, plus the market-source keys the research agents read.
-        credentials: async (context) => ({
-          ...(await marketingCredentials.credentials(context)),
-          ...(await openrouter.credentials(context)),
-        }),
+        // The OpenRouter key the agents read.
+        credentials: (context) => openrouter.credentials(context),
       },
     );
     waits.attach(runs);
@@ -175,7 +169,6 @@ export class ApplicationFactory {
       [
         new HealthController(readiness),
         new OpenRouterController(openrouter, contexts),
-        new MarketingCredentialController(marketingCredentials, contexts),
         new SettingsController(
           new SettingsService(new PrismaSettingsRepository(database.client)),
           contexts,

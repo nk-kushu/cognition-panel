@@ -111,14 +111,6 @@ test("the plan instructions know the compliance cost and leave the legal part to
   assert.match(instructions, /you do not write it/);
 });
 
-test("the registry offers /legal, which never interprets the law and asks for a country first", () => {
-  const legal = CapabilityRegistry.default().command("/legal")!;
-  assert.equal(legal.id, "legal");
-  assert.match(legal.instructions(), /never give legal advice/);
-  assert.match(legal.instructions(), /If "country" is empty, finish at once/);
-  assert.match(legal.instructions(), /"official":true/);
-});
-
 test("/plan reports the missing evidence first, refuses to write when nothing is accepted, and flags all-assumption finances", () => {
   const instructions = CapabilityRegistry.default().command("/plan")!.instructions();
   assert.match(instructions, /preflight\.canWrite is false/);

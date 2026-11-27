@@ -1,5 +1,4 @@
 import type { IAgentToolCall } from "kushibot";
-import type { MarketingToolId } from "../marketing/MarketingTools";
 import type { ResearchToolId } from "../ResearchTools";
 import type { IToolSet } from "../ToolBox";
 
@@ -10,8 +9,6 @@ export type CapabilityModel = "main" | "fast";
 export type CapabilityContext = Readonly<{
   /** Research tools limited to the given ids; all share the run's limits and tally. */
   research(ids: readonly ResearchToolId[]): IToolSet;
-  /** Marketing sources (search, communities, reviews, pages); share the run's call limits. */
-  marketing(ids: readonly MarketingToolId[]): IToolSet;
 }>;
 
 /**

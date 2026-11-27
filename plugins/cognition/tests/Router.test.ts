@@ -72,7 +72,7 @@ test("finds idea-planner and research in the real plugins folder, with commands 
   assert.equal(idea!.entry, path.join(PLUGINS_DIR, "idea-planner", "agent.ts"));
   assert.deepEqual(idea!.commands, ["/idea", "/ask", "/clarify"]);
   assert.equal(research!.name, "Research Agent");
-  assert.deepEqual(research!.commands, ["/analyze", "/discover", "/gaps", "/legal", "/plan", "/sources"]);
+  assert.deepEqual(research!.commands, ["/analyze", "/gaps", "/plan", "/sources"]);
 });
 
 test("the router's own manifest lists exactly the commands of its agents", () => {
