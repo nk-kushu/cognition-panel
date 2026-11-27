@@ -17,7 +17,7 @@ export interface DebugEventRecorder {
 type Limits = Readonly<{ maxActiveRuns: number; maxKeptRuns: number }>;
 
 /** Agents trusted with the actor's saved provider keys (OpenRouter); other agents never receive them. */
-const AGENTS_WITH_PROVIDER_CREDENTIALS: ReadonlySet<string> = new Set(["coding", "idea-planner", "research", "cognition"]);
+const AGENTS_WITH_PROVIDER_CREDENTIALS: ReadonlySet<string> = new Set(["coding", "research", "cognition"]);
 
 /** Whether a run of this agent receives the actor's saved provider keys. */
 export function receivesProviderCredentials(agentName: string): boolean {

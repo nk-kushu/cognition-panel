@@ -8,7 +8,7 @@ import { routeAndDelegate, type ChatRequest } from "./src/RouterAgent";
 import { ThreadMemory } from "./src/ThreadMemory";
 
 /** The agents this router chooses between; the first is the fallback. */
-export const TARGET_AGENTS = ["idea-planner", "research"] as const;
+export const TARGET_AGENTS = ["research"] as const;
 
 const ROUTER_DIR = path.dirname(fileURLToPath(import.meta.url));
 

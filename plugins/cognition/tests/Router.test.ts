@@ -20,7 +20,7 @@ function pluginsFixture(manifests: Record<string, unknown>): string {
 }
 
 const agent = (id: string, commands: string[]): TargetAgent => ({ id, name: `Agent ${id}`, description: `${id} things`, commands, entry: `/plugins/${id}/agent.ts` });
-const IDEA = agent("idea-planner", ["/idea", "/ask", "/clarify"]);
+const GENERAL = agent("general", ["/ask", "/clarify"]);
 const RESEARCH = agent("research", ["/analyze", "/gaps"]);
 
 class FakeDecider implements IAgentDecider {
@@ -38,8 +38,8 @@ function setup(options: { decide?: string | null; previous?: string | null } = {
   const progress: string[] = [];
   const calls: Array<{ entry: string; request: ChatRequest }> = [];
   const deps = {
-    agents: [IDEA, RESEARCH],
-    fallbackId: "idea-planner",
+    agents: [GENERAL, RESEARCH],
+    fallbackId: "general",
     decider,
     memory: {
       previousAgent: () => options.previous ?? null,
@@ -67,36 +67,35 @@ function setup(options: { decide?: string | null; previous?: string | null } = {
 
 // ── Discovery ────────────────────────────────────────────────────────────
 
-test("finds idea-planner and research in the real plugins folder, with commands and entry paths", () => {
-  const [idea, research] = loadTargets(PLUGINS_DIR, ["idea-planner", "research"]);
-  assert.equal(idea!.entry, path.join(PLUGINS_DIR, "idea-planner", "agent.ts"));
-  assert.deepEqual(idea!.commands, ["/idea", "/ask", "/clarify"]);
+test("finds research in the real plugins folder, with commands and entry path", () => {
+  const [research] = loadTargets(PLUGINS_DIR, ["research"]);
+  assert.equal(research!.entry, path.join(PLUGINS_DIR, "research", "agent.ts"));
   assert.equal(research!.name, "Research Agent");
   assert.deepEqual(research!.commands, ["/analyze", "/gaps", "/plan", "/sources"]);
 });
 
 test("the router's own manifest lists exactly the commands of its agents", () => {
-  const agents = loadTargets(PLUGINS_DIR, ["idea-planner", "research"]);
+  const agents = loadTargets(PLUGINS_DIR, ["research"]);
   assert.doesNotThrow(() => assertCommands(agents, routerCommands(path.join(PLUGINS_DIR, "cognition", "kushex-plugin.json"))));
 });
 
 test("names a missing agent and the folder it searched", () => {
-  const root = pluginsFixture({ ideas: { agents: [{ id: "idea-planner", entry: "agent.ts" }] } });
-  assert.throws(() => loadTargets(root, ["idea-planner", "research"]), new RegExp(`cannot find agent "research".*${root.replace(/[/\\]/g, ".")}`));
+  const root = pluginsFixture({ ideas: { agents: [{ id: "general", entry: "agent.ts" }] } });
+  assert.throws(() => loadTargets(root, ["general", "research"]), new RegExp(`cannot find agent "research".*${root.replace(/[/\\]/g, ".")}`));
 });
 
 test("refuses a command declared by two agents", () => {
-  assert.throws(() => assertCommands([IDEA, agent("research", ["/ask"])], ["/idea", "/ask", "/clarify"]), /Both idea-planner and research declare \/ask/);
+  assert.throws(() => assertCommands([GENERAL, agent("research", ["/ask"])], ["/ask", "/clarify"]), /Both general and research declare \/ask/);
 });
 
 test("says what to add and remove when the router manifest is out of date", () => {
-  assert.throws(() => assertCommands([IDEA, RESEARCH], ["/idea", "/ask", "/clarify", "/analyze", "/fill-gap"]), /Add: \/gaps\. Remove: \/fill-gap\./);
+  assert.throws(() => assertCommands([GENERAL, RESEARCH], ["/ask", "/clarify", "/analyze", "/fill-gap"]), /Add: \/gaps\. Remove: \/fill-gap\./);
 });
 
 // ── Routing ──────────────────────────────────────────────────────────────
 
 test("a slash command goes to its agent without asking the model", async () => {
-  const { deps, decider, calls, request, progress } = setup({ decide: "idea-planner" });
+  const { deps, decider, calls, request, progress } = setup({ decide: "general" });
   const answer = await routeAndDelegate({ ...request, message: "/gaps какво липсва" }, deps);
   assert.equal(answer, "answer from /plugins/research/agent.ts");
   assert.equal(decider.inputs.length, 0);
@@ -104,18 +103,18 @@ test("a slash command goes to its agent without asking the model", async () => {
   assert.equal(calls[0]!.request.message, "/gaps какво липсва");
 });
 
-test("/idea goes to idea-planner by command", async () => {
+test("/clarify goes to idea-planner by command", async () => {
   const { deps, calls, request } = setup();
-  await routeAndDelegate({ ...request, message: "/idea booking app" }, deps);
-  assert.equal(calls[0]!.entry, IDEA.entry);
+  await routeAndDelegate({ ...request, message: "/clarify booking app" }, deps);
+  assert.equal(calls[0]!.entry, GENERAL.entry);
 });
 
 test("free text goes to the agent the model chooses, with the previous agent as evidence", async () => {
-  const { deps, decider, calls, request, progress } = setup({ decide: "research", previous: "idea-planner" });
+  const { deps, decider, calls, request, progress } = setup({ decide: "research", previous: "general" });
   await routeAndDelegate({ ...request, message: "какво ми липсва в проучването?" }, deps);
   assert.equal(calls[0]!.entry, RESEARCH.entry);
   assert.equal(progress[0], "→ Agent research (choice)");
-  assert.equal(decider.inputs[0]!.previousAgentId, "idea-planner");
+  assert.equal(decider.inputs[0]!.previousAgentId, "general");
   assert.deepEqual(decider.inputs[0]!.conversation, [{ role: "user", text: "earlier" }, { role: "agent", text: "reply" }]);
 });
 
@@ -129,13 +128,13 @@ test("when the model cannot decide, the thread's previous agent answers", async 
 test("without a previous agent, an undecided message goes to idea-planner", async () => {
   const { deps, calls, request } = setup({ decide: null });
   await routeAndDelegate({ ...request, message: "здравей" }, deps);
-  assert.equal(calls[0]!.entry, IDEA.entry);
+  assert.equal(calls[0]!.entry, GENERAL.entry);
 });
 
 test("a choice that is not one of the agents counts as undecided", async () => {
   const { deps, calls, request } = setup({ decide: "coding" });
   await routeAndDelegate({ ...request, message: "fix the bug" }, deps);
-  assert.equal(calls[0]!.entry, IDEA.entry);
+  assert.equal(calls[0]!.entry, GENERAL.entry);
 });
 
 // ── Delegation ───────────────────────────────────────────────────────────

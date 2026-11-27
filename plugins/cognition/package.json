@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Cognition Panel agent that routes each chat message to idea-planner or research.",
+  "description": "Cognition Panel agent that routes each chat message to the right agent (research).",
   "files": [
     "kushex-plugin.json",
     "**/*.ts",

@@ -5,8 +5,7 @@ The agent behind cognition's general chat. It answers nothing itself: for each m
 
 | Agent | Commands |
 |---|---|
-| `idea-planner` (Cognition Assistant, fallback) | `/idea`, `/ask`, `/clarify` |
-| `research` (Research Agent) | `/analyze`, `/gaps`, `/plan`, `/sources` |
+| `research` (Research Agent, fallback) | `/analyze`, `/gaps`, `/plan`, `/sources` |
 
 ## How it chooses
 
@@ -15,7 +14,7 @@ The agent behind cognition's general chat. It answers nothing itself: for each m
    `deepseek/deepseek-v4.1-flash`). Evidence: the message, the last 4 turns, the thread's previous
    agent and each agent's manifest description.
 3. No decision (abstained, invalid output, no key, rejected key) → the thread's previous agent, else
-   `idea-planner`. The router never fails because of its own model; the chosen agent reports a key problem.
+   `research`. The router never fails because of its own model; the chosen agent reports a key problem.
 
 The first progress line says who answers: `→ Research Agent (command | choice | fallback)`.
 
