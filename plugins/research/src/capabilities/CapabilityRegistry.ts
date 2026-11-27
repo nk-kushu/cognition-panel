@@ -5,6 +5,7 @@ import { DiscoverCapability } from "./DiscoverCapability";
 import { GapsCapability } from "./GapsCapability";
 import { LegalCapability } from "./LegalCapability";
 import { PlanCapability } from "./PlanCapability";
+import { SourcesCapability } from "./SourcesCapability";
 
 /** Every capability the assistant offers, by id and by slash command. */
 export class CapabilityRegistry {
@@ -30,7 +31,7 @@ export class CapabilityRegistry {
 
   static default(): CapabilityRegistry {
     const registry = new CapabilityRegistry(
-      [new AnalyzeCapability(), new DiscoverCapability(), new GapsCapability(), new LegalCapability(), new PlanCapability()],
+      [new AnalyzeCapability(), new DiscoverCapability(), new GapsCapability(), new LegalCapability(), new PlanCapability(), new SourcesCapability()],
       "gaps",
       "gaps",
     );
